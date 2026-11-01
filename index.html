@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Empire Tycoon</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Empire Tycoon">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0c10">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" id="app-icon" href="icons/icon-192.png">
+<style>
+:root{--bg-dark:#0a0c10;--bg-card:#1d2330;--gold:#f5b942;--gold-bright:#ffd700;--gold-dark:#b38015;--green-bright:#34d399;--red:#ef4444;--text-main:#f8fafc;--text-muted:#94a3b8;--border-gold:rgba(245,185,66,.35);--shadow:0 10px 25px -5px rgba(0,0,0,.7);color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+html,body{height:100%}
+body{background:var(--bg-dark);color:var(--text-main);width:100vw;overflow:hidden;display:flex;flex-direction:column;position:relative;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@keyframes shake{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-8px,4px) rotate(-1deg)}40%{transform:translate(8px,-4px) rotate(1deg)}60%{transform:translate(-6px,-2px)}80%{transform:translate(6px,4px) rotate(.5deg)}}
+.shake-screen{animation:shake .4s cubic-bezier(.36,.07,.19,.97) both}
+.red-flash{box-shadow:inset 0 0 80px rgba(239,68,68,.85)!important}
+#fx-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+header{background:linear-gradient(180deg,#161b26,#0f131a);border-bottom:2px solid var(--border-gold);padding:10px 16px;z-index:10;box-shadow:var(--shadow)}
+.hud-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.wealth-box{display:flex;flex-direction:column}
+.money-counter{font-size:clamp(1.6rem,5vw,2.5rem);font-weight:900;color:var(--gold-bright);text-shadow:0 0 18px rgba(255,215,0,.45);font-variant-numeric:tabular-nums}
+.income-stats{display:flex;gap:12px;font-size:.85rem;color:var(--green-bright);font-weight:600}
+.status-badge{background:linear-gradient(135deg,#273042,#181e29);border:1px solid var(--gold);padding:6px 14px;border-radius:50px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:.9rem;box-shadow:0 0 12px rgba(245,185,66,.25)}
+.hud-controls{display:flex;gap:8px}
+.icon-btn{background:var(--bg-card);border:1px solid var(--border-gold);color:var(--text-main);width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.icon-btn:hover{background:var(--gold);color:#000;transform:translateY(-2px)}
+.icon-btn:active{transform:scale(.92)}
+.goal-bar-container{margin-top:8px;background:#090b0f;height:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative}
+.goal-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold-dark),var(--gold-bright),#fff);background-size:200% 100%;animation:shimmer 2s infinite linear;transition:width .3s ease}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.goal-text{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+.empire-stage{position:relative;height:185px;min-height:160px;width:100%;overflow:hidden;border-bottom:2px solid var(--border-gold);display:flex;align-items:center;justify-content:space-between;padding:0 20px;transition:background 1.2s ease;flex-shrink:0}
+.stage-lvl-0{background:linear-gradient(180deg,#1f242d,#303642 65%,#23272e)}
+.stage-lvl-1{background:linear-gradient(180deg,#1d3557,#457b9d 70%,#2b463c)}
+.stage-lvl-2{background:linear-gradient(180deg,#0f172a,#3b4269 65%,#1e293b)}
+.stage-lvl-3{background:linear-gradient(180deg,#2b1055,#7597de 70%,#1b1b2f)}
+.stage-lvl-4{background:linear-gradient(180deg,#422006,#b45309 65%,#1c1917)}
+#city-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.stage-overlay{position:relative;z-index:3;width:100%;display:flex;justify-content:space-between;align-items:center}
+.click-zone{display:flex;flex-direction:column;align-items:center;gap:6px}
+#main-click-btn{background:radial-gradient(circle at 30% 30%,#ffe066,#f59f00 60%,#b45309);border:4px solid #fff3bf;border-radius:50%;width:110px;height:110px;cursor:pointer;box-shadow:0 0 30px rgba(245,185,66,.7),inset 0 -6px 12px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .08s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;touch-action:manipulation}
+#main-click-btn:hover{box-shadow:0 0 42px rgba(255,215,0,.95),inset 0 -6px 12px rgba(0,0,0,.4);transform:scale(1.04)}
+#main-click-btn:active,#main-click-btn.clicked{transform:scale(.9)!important}
+.btn-icon{font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
+.btn-sub{font-size:.75rem;font-weight:900;color:#1a1200;background:rgba(255,255,255,.75);padding:2px 8px;border-radius:10px;margin-top:4px}
+.quick-upgrades{background:rgba(15,20,30,.8);backdrop-filter:blur(6px);border:1px solid var(--border-gold);padding:10px 14px;border-radius:14px;display:flex;flex-direction:column;gap:6px;max-width:240px}
+.upgrade-mini-btn{background:linear-gradient(90deg,#252f42,#1b2230);border:1px solid var(--gold);color:#fff;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:all .15s}
+.upgrade-mini-btn:hover:not(:disabled){background:var(--gold);color:#000}
+.upgrade-mini-btn:disabled{opacity:.45;cursor:not-allowed;border-color:#475569}
+main{flex:1;overflow-y:auto;padding:16px;background:radial-gradient(circle at top,#171d29,#0a0c10)}
+.tab-panel{display:none;animation:fadeIn .25s ease-out;max-width:950px;margin:0 auto}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section-title{font-size:1.2rem;font-weight:800;color:var(--gold);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding-bottom:20px}
+.item-card{background:var(--bg-card);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;transition:transform .2s,border-color .2s,box-shadow .2s}
+.item-card:hover{border-color:var(--border-gold);transform:translateY(-2px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;gap:12px}
+.card-icon{font-size:2.2rem;background:rgba(0,0,0,.35);width:54px;height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.card-info h3{font-size:1rem;font-weight:800;color:#fff}
+.card-info p{font-size:.8rem;color:var(--green-bright);font-weight:600}
+.card-count{margin-left:auto;background:rgba(245,185,66,.15);color:var(--gold);border:1px solid var(--border-gold);padding:4px 10px;border-radius:20px;font-weight:800;font-size:.85rem}
+.card-actions{display:flex;gap:8px}
+.btn-action{flex:1;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#000;border:none;padding:10px 12px;border-radius:10px;font-weight:800;font-size:.85rem;cursor:pointer;transition:all .15s;display:flex;justify-content:center;align-items:center;gap:6px}
+.btn-action:hover:not(:disabled){filter:brightness(1.12);transform:scale(1.02)}
+.btn-action:active:not(:disabled){transform:scale(.96)}
+.btn-action:disabled{background:#2a3241;color:#64748b;cursor:not-allowed}
+.btn-secondary{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff}
+.market-container,.casino-box{background:var(--bg-card);border:1px solid var(--border-gold);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.asset-selector{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.asset-tab{flex:1;min-width:120px;background:#12161f;border:1px solid rgba(255,255,255,.1);color:var(--text-muted);padding:10px;border-radius:10px;cursor:pointer;font-weight:700;text-align:center;transition:all .2s}
+.asset-tab.active{background:rgba(245,185,66,.15);border-color:var(--gold);color:#fff}
+.chart-box{position:relative;background:#090c10;border-radius:12px;border:1px solid rgba(255,255,255,.08);height:210px;width:100%;overflow:hidden}
+#stock-canvas{width:100%;height:100%;display:block}
+.market-hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;background:#12161f;padding:12px;border-radius:12px}
+.stat-box{display:flex;flex-direction:column}
+.stat-label{font-size:.75rem;color:var(--text-muted)}
+.stat-val{font-size:1.1rem;font-weight:800}
+.trade-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-buy{background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:14px;font-size:1rem}
+.btn-sell{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;padding:14px;font-size:1rem}
+.bet-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#12161f;padding:12px;border-radius:12px}
+.bet-input{background:#090c10;border:1px solid var(--gold);color:var(--gold-bright);font-size:1.1rem;font-weight:800;padding:8px 12px;border-radius:8px;width:150px;user-select:text;-webkit-user-select:text}
+.chip-btn{background:#262f40;border:1px solid rgba(255,255,255,.15);color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;transition:.15s}
+.chip-btn:hover{background:var(--gold);color:#000}
+.casino-games-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.mini-game-card{background:#12161f;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:14px}
+.slot-reels{display:flex;justify-content:center;gap:10px;margin:8px 0}
+.reel{width:64px;height:74px;background:linear-gradient(180deg,#07090c,#1e2536 50%,#07090c);border:2px solid var(--gold);border-radius:10px;font-size:2.3rem;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 12px #000}
+.roulette-wheel{width:84px;height:84px;border-radius:50%;margin:0 auto;border:4px solid var(--gold);background:conic-gradient(#ef4444 0deg 60deg,#111827 60deg 120deg,#ef4444 120deg 180deg,#10b981 180deg 210deg,#111827 210deg 270deg,#ef4444 270deg 330deg,#111827 330deg 360deg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:transform 1.2s cubic-bezier(.15,.85,.25,1)}
+nav{background:#11151e;border-top:2px solid var(--border-gold);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 8px;gap:6px;z-index:10}
+.nav-btn{background:transparent;border:none;color:var(--text-muted);padding:8px 4px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.75rem;font-weight:700;transition:all .2s}
+.nav-icon{font-size:1.4rem;transition:transform .2s}
+.nav-btn.active{background:rgba(245,185,66,.15);color:var(--gold-bright)}
+.nav-btn.active .nav-icon{transform:scale(1.18)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-backdrop.show{display:flex;animation:fadeIn .25s ease}
+.modal-card{background:linear-gradient(180deg,#1e2536,#121620);border:2px solid var(--gold);border-radius:20px;max-width:440px;width:100%;padding:24px;text-align:center;box-shadow:0 0 50px rgba(245,185,66,.35);display:flex;flex-direction:column;gap:16px}
+.modal-icon{font-size:3.5rem}
+.modal-title{font-size:1.4rem;font-weight:900;color:var(--gold-bright)}
+.modal-desc{font-size:.95rem;color:#cbd5e1;line-height:1.5}
+.modal-choices{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+#toast-container{position:fixed;top:85px;right:16px;z-index:600;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:rgba(20,24,33,.95);border-left:4px solid var(--gold);color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;font-size:.85rem;box-shadow:var(--shadow);animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:600px){.empire-stage{height:160px;padding:0 12px}#main-click-btn{width:96px;height:96px}.quick-upgrades{max-width:195px;padding:8px}.cards-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<canvas id="fx-canvas"></canvas>
+<div id="toast-container"></div>
+
+<header>
+  <div class="hud-top">
+    <div class="wealth-box">
+      <div class="money-counter" id="money-display">0 $</div>
+      <div class="income-stats"><span id="gps-display">+0 $ / sec</span><span>•</span><span id="gpc-display">+1 $ / clic</span></div>
+    </div>
+    <div class="status-badge"><span id="status-icon">🏚️</span><span id="status-name">Pauvre</span></div>
+    <div class="hud-controls">
+      <button class="icon-btn" id="sound-btn" title="Couper/Activer le son">🔊</button>
+      <button class="icon-btn" id="reset-btn" title="Recommencer la partie">🔄</button>
+    </div>
+  </div>
+  <div class="goal-bar-container"><div class="goal-bar-fill" id="goal-bar"></div><div class="goal-text" id="goal-text">OBJECTIF MILLIARDAIRE : 0.00%</div></div>
+</header>
+
+<section class="empire-stage stage-lvl-0" id="empire-stage">
+  <canvas id="city-canvas"></canvas>
+  <div class="stage-overlay">
+    <div class="click-zone">
+      <button id="main-click-btn"><span class="btn-icon">💵</span><span class="btn-sub" id="btn-click-val">+1 $</span></button>
+    </div>
+    <div class="quick-upgrades">
+      <button class="upgrade-mini-btn" id="upg-click-btn" onclick="buyClickUpgrade()"><span>⚡ Clic x2</span><span id="upg-click-cost">50 $</span></button>
+      <button class="upgrade-mini-btn" id="upg-manager-btn" onclick="buyManagerUpgrade()"><span>👔 Boost Empire +25%</span><span id="upg-manager-cost">500 $</span></button>
+    </div>
+  </div>
+</section>
+
+<main>
+  <div class="tab-panel active" id="tab-business">
+    <div class="section-title"><span>🏢 Tes Entreprises</span><small style="color:var(--text-muted);font-size:.8rem">Revenus automatiques chaque seconde</small></div>
+    <div class="cards-grid" id="business-grid"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-stocks">
+    <div class="section-title"><span>📈 Wall Street & Crypto</span><small style="color:var(--text-muted);font-size:.8rem">Achète bas, revends haut !</small></div>
+    <div class="market-container">
+      <div class="asset-selector" id="asset-tabs"></div>
+      <div class="chart-box"><canvas id="stock-canvas"></canvas></div>
+      <div class="market-hud">
+        <div class="stat-box"><span class="stat-label">Prix actuel</span><span class="stat-val" id="stock-price">100 $</span></div>
+        <div class="stat-box"><span class="stat-label">Parts possédées</span><span class="stat-val" id="stock-owned">0</span></div>
+        <div class="stat-box"><span class="stat-label">Prix d'achat moyen</span><span class="stat-val" id="stock-avg">0 $</span></div>
+        <div class="stat-box"><span class="stat-label">Plus-value latente</span><span class="stat-val" id="stock-profit">0 $</span></div>
+      </div>
+      <div class="trade-buttons">
+        <button class="btn-action btn-buy" onclick="buyAsset(1)">ACHETER 1 PART</button>
+        <button class="btn-action btn-sell" onclick="sellAsset(1)">VENDRE 1 PART</button>
+        <button class="btn-action btn-buy" onclick="buyAssetMax()">ACHETER MAX (50% Cash)</button>
+        <button class="btn-action btn-sell" onclick="sellAssetAll()">TOUT VENDRE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-realestate">
+    <div class="section-title"><span>🏙️ Empire Immobilier</span><small style="color:var(--text-muted);font-size:.8rem">Construit la ville en haut de l'écran !</small></div>
+    <div class="cards-grid" id="realestate-grid"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-casino">
+    <div class="section-title"><span>🎰 Casino Royal VIP</span><small style="color:var(--text-muted);font-size:.8rem">Quitte ou double instantané</small></div>
+    <div class="casino-box">
+      <div class="bet-controls">
+        <span style="font-weight:800">MISE :</span>
+        <input type="number" id="bet-input" class="bet-input" value="100" min="1">
+        <button class="chip-btn" onclick="setBetFraction(.1)">10%</button>
+        <button class="chip-btn" onclick="setBetFraction(.25)">25%</button>
+        <button class="chip-btn" onclick="setBetFraction(.5)">50%</button>
+        <button class="chip-btn" onclick="setBetFraction(1)">TAPIS (MAX)</button>
+      </div>
+      <div class="casino-games-grid">
+        <div class="mini-game-card">
+          <h3>🪙 Pile ou Face</h3>
+          <p style="color:var(--text-muted);font-size:.8rem">50% de chance • Gain x2</p>
+          <div id="coin-visual" style="font-size:3.2rem;margin:6px 0">🪙</div>
+          <button class="btn-action" onclick="playCoinFlip()">LANCER LA PIÈCE (x2)</button>
+        </div>
+        <div class="mini-game-card">
+          <h3>🎡 Roulette</h3>
+          <p style="color:var(--text-muted);font-size:.8rem">Choisis ta couleur</p>
+          <div class="roulette-wheel" id="roulette-wheel">💎</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-action" style="background:#ef4444;color:#fff" onclick="playRoulette('red')">ROUGE (x2)</button>
+            <button class="btn-action" style="background:#1f2937;color:#fff;border:1px solid #fff" onclick="playRoulette('black')">NOIR (x2)</button>
+            <button class="btn-action" style="background:#10b981;color:#fff" onclick="playRoulette('green')">VERT (x10)</button>
+          </div>
+        </div>
+        <div class="mini-game-card">
+          <h3>🎰 Jackpot 777</h3>
+          <p style="color:var(--text-muted);font-size:.8rem">2 identiques = x1.5 • 3 identiques = x6</p>
+          <div class="slot-reels"><div class="reel" id="reel-1">🍒</div><div class="reel" id="reel-2">💎</div><div class="reel" id="reel-3">7️⃣</div></div>
+          <button class="btn-action" onclick="playSlots()">TIRER LE LEVIER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-achievements">
+    <div class="section-title"><span>🏆 Succès & Trophées</span><span id="ach-counter" style="font-size:.9rem">0 / 8</span></div>
+    <div class="cards-grid" id="achievements-grid"></div>
+  </div>
+</main>
+
+<nav>
+  <button class="nav-btn active" onclick="switchTab('business',this)"><span class="nav-icon">🏢</span><span>Business</span></button>
+  <button class="nav-btn" onclick="switchTab('stocks',this)"><span class="nav-icon">📈</span><span>Bourse</span></button>
+  <button class="nav-btn" onclick="switchTab('realestate',this)"><span class="nav-icon">🏙️</span><span>Immobilier</span></button>
+  <button class="nav-btn" onclick="switchTab('casino',this)"><span class="nav-icon">🎰</span><span>Casino</span></button>
+  <button class="nav-btn" onclick="switchTab('achievements',this)"><span class="nav-icon">🏆</span><span>Succès</span></button>
+</nav>
+
+<div class="modal-backdrop" id="event-modal">
+  <div class="modal-card">
+    <div class="modal-icon" id="event-icon">💼</div>
+    <div class="modal-title" id="event-title"></div>
+    <div class="modal-desc" id="event-desc"></div>
+    <div class="modal-choices" id="event-choices"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="victory-modal">
+  <div class="modal-card">
+    <div class="modal-icon">👑🥂🎆</div>
+    <div class="modal-title">TU ES MILLIARDAIRE !</div>
+    <div class="modal-desc">Incroyable ! Parti de 0 $, tu as bâti un empire financier planétaire et franchi le cap mythique de <strong>1 000 000 000 $</strong> ! La ville entière t’appartient.</div>
+    <div class="modal-choices">
+      <button class="btn-action" onclick="closeVictoryModal()">CONTINUER VERS LE TRILLION 🚀</button>
+      <button class="btn-action btn-secondary" onclick="resetGame(true)">RECOMMENCER À ZÉRO 🔄</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SoundFX={ctx:null,muted:false,
+init(){if(!this.ctx){const A=window.AudioContext||window.webkitAudioContext;this.ctx=new A()}if(this.ctx.state==='suspended')this.ctx.resume()},
+playTone(f,type,d,vol=.12,slide=null){if(this.muted)return;try{this.init();const o=this.ctx.createOscillator(),g=this.ctx.createGain(),t=this.ctx.currentTime;o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+d);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(t+d)}catch(e){}},
+coin(){this.playTone(987.77,'sine',.08,.1);setTimeout(()=>this.playTone(1318.51,'sine',.18,.12),60)},
+buy(){this.playTone(523.25,'triangle',.09,.12);setTimeout(()=>this.playTone(659.25,'triangle',.15,.14),70)},
+loss(){this.playTone(220,'sawtooth',.35,.15,90)},
+fanfare(){[523.25,659.25,783.99,1046.5].forEach((n,i)=>setTimeout(()=>this.playTone(n,'triangle',.28,.16),i*110))}};
+
+const STATUS_TIERS=[
+{min:0,name:"Pauvre",icon:"🏚️",class:"stage-lvl-0"},
+{min:1000,name:"Classe Moyenne",icon:"🚗",class:"stage-lvl-1"},
+{min:50000,name:"Riche",icon:"💎",class:"stage-lvl-2"},
+{min:1e6,name:"Millionnaire",icon:"🛥️",class:"stage-lvl-3"},
+{min:1e9,name:"Milliardaire",icon:"👑",class:"stage-lvl-4"}];
+
+const DEFAULT_STATE=()=>({
+money:0,displayedMoney:0,totalEarned:0,clickLevel:1,clickCost:50,managerLevel:0,managerCost:500,milestoneIndex:0,victoryShown:false,selectedAsset:0,
+businesses:[
+{id:'lemon',name:'Stand de Limonade',icon:'🍋',baseCost:15,baseIncome:1,count:0},
+{id:'snack',name:'Food Truck Burger',icon:'🍔',baseCost:120,baseIncome:10,count:0},
+{id:'resto',name:'Restaurant Chic',icon:'🍝',baseCost:1400,baseIncome:95,count:0},
+{id:'factory',name:'Usine Robotisée',icon:'🏭',baseCost:18000,baseIncome:900,count:0},
+{id:'tech',name:'Startup IA & Cloud',icon:'💻',baseCost:250000,baseIncome:11000,count:0},
+{id:'bank',name:'Banque Mondiale',icon:'🏦',baseCost:4500000,baseIncome:165000,count:0},
+{id:'space',name:'Agence Spatiale',icon:'🚀',baseCost:75000000,baseIncome:2800000,count:0}],
+realEstate:[
+{id:'studio',name:'Petit Studio',icon:'🏠',baseCost:500,baseRent:30,count:0,reno:0,color:'#60a5fa',h:28},
+{id:'villa',name:'Villa avec Piscine',icon:'🏡',baseCost:12000,baseRent:550,count:0,reno:0,color:'#34d399',h:42},
+{id:'building',name:'Immeuble Résidentiel',icon:'🏢',baseCost:180000,baseRent:7200,count:0,reno:0,color:'#a78bfa',h:70},
+{id:'mall',name:'Centre Commercial',icon:'🏬',baseCost:3200000,baseRent:110000,count:0,reno:0,color:'#f472b6',h:90},
+{id:'tower',name:'Gratte-Ciel Doré',icon:'🏙️',baseCost:55000000,baseRent:1950000,count:0,reno:0,color:'#fbbf24',h:135}],
+assets:[
+{id:'tech',name:'TechCorp (Action)',price:100,history:[100],volatility:.05,owned:0,avgPrice:0},
+{id:'gold',name:'Or & Matières',price:450,history:[450],volatility:.03,owned:0,avgPrice:0},
+{id:'btc',name:'BitCoinX (Crypto)',price:2500,history:[2500],volatility:.14,owned:0,avgPrice:0}],
+achievements:[
+{id:'first_click',name:'Premier Dollar',desc:'Gagner ton premier dollar',icon:'💵',unlocked:false},
+{id:'thousand',name:'Sorti de la Galère',desc:'Atteindre 1 000 $',icon:'🥉',unlocked:false},
+{id:'biz_boss',name:'Entrepreneur',desc:'Posséder 10 entreprises',icon:'🏢',unlocked:false},
+{id:'landlord',name:'Baron Immobilier',desc:'Posséder 5 biens immobiliers',icon:'🔑',unlocked:false},
+{id:'trader',name:'Loup de Wall Street',desc:'Détenir des actions ou cryptos',icon:'📈',unlocked:false},
+{id:'million',name:'Le Million !',desc:'Atteindre 1 000 000 $',icon:'🥇',unlocked:false},
+{id:'sky_king',name:'Roi de la Skyline',desc:'Construire un Gratte-Ciel Doré',icon:'🏙️',unlocked:false},
+{id:'billion',name:'Club des Milliardaires',desc:'Atteindre 1 000 000 000 $',icon:'👑',unlocked:false}]
+});
+let state=DEFAULT_STATE();
+
+function seedMarketHistory(){state.assets.forEach(a=>{if(a.history.length<40){let p=a.price;a.history=[];for(let i=0;i<45;i++){p=Math.max(5,p*(1+(Math.random()-.49)*a.volatility));a.history.push(p)}a.price=p}})}
+
+function fmt(n){if(n==null||isNaN(n))return"0 $";const a=Math.abs(n),s=n<0?"-":"";
+if(a>=1e12)return s+(a/1e12).toFixed(2)+" T$";if(a>=1e9)return s+(a/1e9).toFixed(2)+" Md$";if(a>=1e6)return s+(a/1e6).toFixed(2)+" M$";
+if(a>=1e3)return s+Math.floor(a).toLocaleString('fr-FR')+" $";return s+Math.floor(a)+" $"}
+
+function getClickPower(){return Math.max(1,Math.floor(Math.pow(2,state.clickLevel-1)+getIncomePerSecond()*.005))}
+function getIncomePerSecond(){let t=0;state.businesses.forEach(b=>t+=b.count*b.baseIncome);state.realEstate.forEach(r=>t+=r.count*r.baseRent*(1+r.reno*.5));return t*(1+state.managerLevel*.25)*0.4}
+
+function addMoney(amount,x=null,y=null,show=true){state.money+=amount;if(amount>0)state.totalEarned+=amount;
+if(x!==null&&y!==null&&show)spawnFloatingText((amount>=0?"+":"")+fmt(amount),x,y,amount>=0?"#ffd700":"#ef4444");
+checkMilestones();checkAchievements()}
+
+function loseMoney(amount,reason=""){const loss=Math.min(state.money,amount);state.money-=loss;SoundFX.loss();
+document.body.classList.remove('shake-screen','red-flash');void document.body.offsetWidth;document.body.classList.add('shake-screen','red-flash');
+setTimeout(()=>document.body.classList.remove('shake-screen','red-flash'),450);
+spawnFloatingText("-"+fmt(loss)+(reason?` (${reason})`:""),window.innerWidth/2,140,"#ef4444")}
+
+const fxCanvas=document.getElementById('fx-canvas'),fxCtx=fxCanvas.getContext('2d');
+let particles=[],floatingTexts=[];
+function resizeCanvases(){fxCanvas.width=innerWidth;fxCanvas.height=innerHeight;
+const c=document.getElementById('city-canvas');c.width=c.parentElement.clientWidth;c.height=c.parentElement.clientHeight;
+const s=document.getElementById('stock-canvas');if(s.parentElement.clientWidth>0){s.width=s.parentElement.clientWidth;s.height=s.parentElement.clientHeight}
+renderCity()}
+window.addEventListener('resize',resizeCanvases);
+
+function spawnParticles(x,y,count=8,emojis=['🪙','💵','✨']){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-.5)*9,vy:-Math.random()*8-3,gravity:.35,emoji:emojis[Math.floor(Math.random()*emojis.length)],size:16+Math.random()*12,alpha:1,rot:Math.random()*6.28,vRot:(Math.random()-.5)*.2})}
+function spawnConfetti(){SoundFX.fanfare();const e=['🎉','🎊','✨','💎','💵','👑'];for(let i=0;i<65;i++)particles.push({x:innerWidth*Math.random(),y:-20-Math.random()*100,vx:(Math.random()-.5)*6,vy:Math.random()*4+2,gravity:.08,emoji:e[Math.floor(Math.random()*e.length)],size:18+Math.random()*14,alpha:1,rot:Math.random()*6,vRot:(Math.random()-.5)*.15})}
+function spawnFloatingText(text,x,y,color="#ffd700"){floatingTexts.push({text,x,y,vy:-2.2,alpha:1,color})}
+
+function renderFX(){fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.rot+=p.vRot;p.alpha-=.012;
+if(p.alpha<=0||p.y>fxCanvas.height+50){particles.splice(i,1);continue}
+fxCtx.save();fxCtx.globalAlpha=Math.max(0,p.alpha);fxCtx.translate(p.x,p.y);fxCtx.rotate(p.rot);fxCtx.font=`${p.size}px serif`;fxCtx.textAlign='center';fxCtx.textBaseline='middle';fxCtx.fillText(p.emoji,0,0);fxCtx.restore()}
+for(let i=floatingTexts.length-1;i>=0;i--){const f=floatingTexts[i];f.y+=f.vy;f.alpha-=.02;if(f.alpha<=0){floatingTexts.splice(i,1);continue}
+fxCtx.save();fxCtx.globalAlpha=Math.max(0,f.alpha);fxCtx.font="900 19px 'Segoe UI',sans-serif";fxCtx.fillStyle=f.color;fxCtx.strokeStyle="#000";fxCtx.lineWidth=3;fxCtx.textAlign="center";fxCtx.strokeText(f.text,f.x,f.y);fxCtx.fillText(f.text,f.x,f.y);fxCtx.restore()}}
+
+const cityCanvas=document.getElementById('city-canvas'),cityCtx=cityCanvas.getContext('2d');
+function renderCity(){const w=cityCanvas.width,h=cityCanvas.height;cityCtx.clearRect(0,0,w,h);
+cityCtx.fillStyle="rgba(255,255,255,.35)";for(let i=0;i<20;i++)cityCtx.fillRect((i*97)%w,(i*37)%(h*.6),2,2);
+cityCtx.fillStyle="#111622";cityCtx.fillRect(0,h-18,w,18);
+let x=140;
+state.realEstate.forEach((prop,idx)=>{const n=Math.min(prop.count,6);
+for(let c=0;c<n;c++){if(x>w-220)break;const bw=26+idx*5,bh=Math.min(h-28,prop.h+prop.reno*6),by=h-18-bh;
+cityCtx.fillStyle=prop.color;cityCtx.fillRect(x,by,bw,bh);
+if(prop.reno>0){cityCtx.strokeStyle="#ffd700";cityCtx.lineWidth=1.5;cityCtx.strokeRect(x,by,bw,bh)}
+cityCtx.fillStyle="#fef08a";for(let wy=by+6;wy<h-24;wy+=10)for(let wx=x+5;wx<x+bw-6;wx+=8)cityCtx.fillRect(wx,wy,4,5);
+x+=bw+8}})}
+
+const mainClickBtn=document.getElementById('main-click-btn');
+mainClickBtn.addEventListener('pointerdown',e=>{const gain=getClickPower(),r=mainClickBtn.getBoundingClientRect();
+const cx=e.clientX||(r.left+r.width/2),cy=e.clientY||(r.top+r.height/2);
+addMoney(gain,cx,cy,true);spawnParticles(cx,cy,6,['💵','🪙','✨']);SoundFX.coin();
+mainClickBtn.classList.add('clicked');setTimeout(()=>mainClickBtn.classList.remove('clicked'),90);updateHUD()});
+
+function buyClickUpgrade(){if(state.money<state.clickCost)return;state.money-=state.clickCost;state.clickLevel++;state.clickCost=Math.floor(state.clickCost*2.4);SoundFX.buy();spawnParticles(innerWidth-100,140,10,['⚡','💵']);renderBusinesses();updateHUD()}
+function buyManagerUpgrade(){if(state.money<state.managerCost)return;state.money-=state.managerCost;state.managerLevel++;state.managerCost=Math.floor(state.managerCost*3.2);SoundFX.buy();spawnParticles(innerWidth-100,170,10,['👔','📈']);renderBusinesses();renderRealEstate();updateHUD()}
+
+function renderBusinesses(){const g=document.getElementById('business-grid');g.innerHTML='';
+state.businesses.forEach((b,i)=>{const cost=Math.floor(b.baseCost*Math.pow(1.18,b.count)),inc=b.baseIncome*(1+state.managerLevel*.25)*0.4;
+const c=document.createElement('div');c.className='item-card';
+c.innerHTML=`<div class="card-header"><div class="card-icon">${b.icon}</div><div class="card-info"><h3>${b.name}</h3><p>+${fmt(inc)} / sec chacun</p></div><div class="card-count">x${b.count}</div></div><div class="card-actions"><button class="btn-action" id="biz-btn-${i}" onclick="buyBusiness(${i},event)">Acheter • ${fmt(cost)}</button></div>`;
+g.appendChild(c)});updateButtonsState()}
+function buyBusiness(i,e){const b=state.businesses[i],cost=Math.floor(b.baseCost*Math.pow(1.18,b.count));if(state.money<cost)return;
+state.money-=cost;b.count++;SoundFX.buy();if(e)spawnParticles(e.clientX,e.clientY,10,[b.icon,'💵','✨']);renderBusinesses();updateHUD();checkAchievements()}
+
+function renderRealEstate(){const g=document.getElementById('realestate-grid');g.innerHTML='';
+state.realEstate.forEach((r,i)=>{const buy=Math.floor(r.baseCost*Math.pow(1.25,r.count)),reno=Math.floor(r.baseCost*1.8*Math.pow(2.2,r.reno)),rent=r.baseRent*(1+r.reno*.5)*(1+state.managerLevel*.25)*0.4;
+const c=document.createElement('div');c.className='item-card';
+c.innerHTML=`<div class="card-header"><div class="card-icon">${r.icon}</div><div class="card-info"><h3>${r.name} ${r.reno>0?'⭐'.repeat(Math.min(5,r.reno)):''}</h3><p>Loyer : +${fmt(rent)} / sec</p></div><div class="card-count">x${r.count}</div></div><div class="card-actions"><button class="btn-action" id="re-buy-${i}" onclick="buyProperty(${i},event)">Acheter • ${fmt(buy)}</button><button class="btn-action btn-secondary" id="re-reno-${i}" onclick="renovateProperty(${i},event)" ${r.count===0?'disabled':''}>Rénover (+50%) • ${fmt(reno)}</button></div>`;
+g.appendChild(c)});updateButtonsState()}
+function buyProperty(i,e){const r=state.realEstate[i],cost=Math.floor(r.baseCost*Math.pow(1.25,r.count));if(state.money<cost)return;
+state.money-=cost;r.count++;SoundFX.buy();if(e)spawnParticles(e.clientX,e.clientY,12,[r.icon,'🔑','✨']);renderRealEstate();renderCity();updateHUD();checkAchievements()}
+function renovateProperty(i,e){const r=state.realEstate[i];if(r.count===0)return;const cost=Math.floor(r.baseCost*1.8*Math.pow(2.2,r.reno));if(state.money<cost)return;
+state.money-=cost;r.reno++;SoundFX.buy();if(e)spawnParticles(e.clientX,e.clientY,12,['🛠️','⭐','💎']);renderRealEstate();renderCity();updateHUD()}
+
+function renderAssetTabs(){const c=document.getElementById('asset-tabs');c.innerHTML='';
+state.assets.forEach((a,i)=>{const b=document.createElement('button');b.className='asset-tab'+(state.selectedAsset===i?' active':'');
+b.innerHTML=`${a.name}<br><span style="color:var(--gold)">${fmt(a.price)}</span>`;
+b.onclick=()=>{state.selectedAsset=i;renderAssetTabs();drawStockChart();updateMarketHUD()};c.appendChild(b)})}
+function tickMarket(){state.assets.forEach(a=>{const d=(Math.random()-.488)*2*a.volatility;a.price=Math.max(5,a.price*(1+d));a.history.push(a.price);if(a.history.length>50)a.history.shift()});
+if(document.getElementById('tab-stocks').classList.contains('active')){renderAssetTabs();drawStockChart();updateMarketHUD()}}
+function drawStockChart(){const canvas=document.getElementById('stock-canvas'),ctx=canvas.getContext('2d');if(canvas.width===0)resizeCanvases();
+const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const hist=state.assets[state.selectedAsset].history;if(hist.length<2)return;
+const min=Math.min(...hist)*.95,max=Math.max(...hist)*1.05,range=Math.max(1,max-min),up=hist[hist.length-1]>=hist[0];
+ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;for(let i=1;i<4;i++){const y=(h/4)*i;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ctx.beginPath();hist.forEach((v,i)=>{const x=(i/(hist.length-1))*(w-20)+10,y=h-15-((v-min)/range)*(h-30);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+ctx.strokeStyle=up?'#10b981':'#ef4444';ctx.lineWidth=3;ctx.stroke();
+ctx.lineTo(w-10,h);ctx.lineTo(10,h);ctx.closePath();const gr=ctx.createLinearGradient(0,0,0,h);
+gr.addColorStop(0,up?'rgba(16,185,129,.35)':'rgba(239,68,68,.35)');gr.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=gr;ctx.fill()}
+function updateMarketHUD(){const a=state.assets[state.selectedAsset];
+document.getElementById('stock-price').textContent=fmt(a.price);document.getElementById('stock-owned').textContent=a.owned;document.getElementById('stock-avg').textContent=fmt(a.avgPrice);
+const p=(a.price-a.avgPrice)*a.owned,el=document.getElementById('stock-profit');el.textContent=(p>=0?"+":"")+fmt(p);el.style.color=p>=0?'var(--green-bright)':'var(--red)'}
+function buyAsset(q){const a=state.assets[state.selectedAsset],cost=a.price*q;if(state.money<cost||q<=0)return;
+const before=a.owned*a.avgPrice;state.money-=cost;a.owned+=q;a.avgPrice=(before+cost)/a.owned;SoundFX.buy();updateMarketHUD();updateHUD();checkAchievements()}
+function buyAssetMax(){const a=state.assets[state.selectedAsset],q=Math.floor((state.money*.5)/a.price);if(q>=1)buyAsset(q)}
+function sellAsset(q){const a=state.assets[state.selectedAsset];if(a.owned<q||q<=0)return;
+const rev=a.price*q,profit=(a.price-a.avgPrice)*q;a.owned-=q;if(a.owned===0)a.avgPrice=0;
+addMoney(rev,innerWidth/2,260,true);
+if(profit>=0){SoundFX.coin();spawnParticles(innerWidth/2,260,12,['📈','💵','🪙'])}else SoundFX.loss();
+updateMarketHUD();updateHUD()}
+function sellAssetAll(){const a=state.assets[state.selectedAsset];if(a.owned>0)sellAsset(a.owned)}
+
+function getBetAmount(){const inp=document.getElementById('bet-input');let v=Math.floor(Number(inp.value));if(isNaN(v)||v<=0)return 0;
+if(v>state.money){v=Math.floor(state.money);inp.value=v}return v}
+function setBetFraction(f){document.getElementById('bet-input').value=Math.max(1,Math.floor(state.money*f))}
+function playCoinFlip(){const bet=getBetAmount();if(bet<=0||state.money<bet)return;
+const c=document.getElementById('coin-visual');c.style.transition='transform .4s';c.style.transform='rotateY(720deg)';setTimeout(()=>c.style.transform='rotateY(0deg)',420);
+if(Math.random()<.5){addMoney(bet,innerWidth/2,300,true);SoundFX.coin();spawnParticles(innerWidth/2,300,15,['🪙','💵','✨'])}else loseMoney(bet,"Pile ou Face");updateHUD()}
+let rouletteAngle=0;
+function playRoulette(choice){const bet=getBetAmount();if(bet<=0||state.money<bet)return;
+rouletteAngle+=720+Math.floor(Math.random()*360);document.getElementById('roulette-wheel').style.transform=`rotate(${rouletteAngle}deg)`;
+const r=Math.random();let out='black';if(r<.08)out='green';else if(r<.54)out='red';
+state.money-=bet;
+setTimeout(()=>{if(choice===out){const m=choice==='green'?10:2;addMoney(bet*m,innerWidth/2,320,true);SoundFX.fanfare();spawnParticles(innerWidth/2,320,22,['🎰','💎','💵'])}else loseMoney(0,"Roulette perdue");updateHUD()},600)}
+function playSlots(){const bet=getBetAmount();if(bet<=0||state.money<bet)return;
+const s=['🍒','🍋','🔔','💎','7️⃣'],pick=()=>s[Math.floor(Math.random()*s.length)],a=pick(),b=pick(),c=pick();
+document.getElementById('reel-1').textContent=a;document.getElementById('reel-2').textContent=b;document.getElementById('reel-3').textContent=c;
+if(a===b&&b===c){addMoney(bet*5,innerWidth/2,340,true);spawnConfetti()}
+else if(a===b||b===c||a===c){addMoney(Math.floor(bet*.5),innerWidth/2,340,true);SoundFX.coin();spawnParticles(innerWidth/2,340,14,['🎰','🪙','💵'])}
+else loseMoney(bet,"Machine à sous");updateHUD()}
+
+const RANDOM_EVENTS=[
+{icon:'🦈',title:'Un Investisseur te propose un Deal',desc:'Un milliardaire de la Silicon Valley veut financer ton expansion, mais le projet comporte un risque.',choices:[
+{label:'Accepter le deal risqué (55% +60% / 45% -25%)',action:()=>{if(Math.random()<.55){const g=Math.max(500,Math.floor(state.money*.6));addMoney(g,innerWidth/2,200);spawnConfetti();showToast("Jackpot ! Le deal a rapporté "+fmt(g))}else loseMoney(Math.floor(state.money*.25),"Deal raté")}},
+{label:'Signer un contrat sûr (+15% de cash)',action:()=>{addMoney(Math.max(150,Math.floor(state.money*.15)),innerWidth/2,200);SoundFX.coin()}},
+{label:'Refuser poliment',action:()=>showToast("Tu as décliné l’offre.")}]},
+{icon:'🕵️',title:'Contrôle Fiscal Surprise !',desc:'L’inspecteur des impôts examine les comptes de ton empire.',choices:[
+{label:'Payer la taxe honnêtement (-12% du cash)',action:()=>loseMoney(Math.floor(state.money*.12),"Impôts")},
+{label:'Engager un avocat fiscaliste (50% 0 $ / 50% amende -25%)',action:()=>{if(Math.random()<.5){SoundFX.coin();showToast("Ton avocat a gagné ! 0 $ d’impôt payé.")}else loseMoney(Math.floor(state.money*.25),"Redressement fiscal")}}]},
+{icon:'🎁',title:'Héritage d’un Oncle d’Amérique',desc:'Un parent éloigné t’a légué un coffre mystérieux !',choices:[
+{label:'Prendre le chèque garanti',action:()=>{addMoney(Math.max(300,Math.floor(getIncomePerSecond()*25+state.money*.18)),innerWidth/2,200);SoundFX.fanfare()}},
+{label:'Vendre le coffre aux enchères (45% gros gain)',action:()=>{if(Math.random()<.45){addMoney(Math.max(900,Math.floor(getIncomePerSecond()*65+state.money*.45)),innerWidth/2,200);spawnConfetti()}else showToast("Le coffre était vide ! Dommage.")}}]}];
+
+function triggerRandomEvent(){const modal=document.getElementById('event-modal');
+if(modal.classList.contains('show')||document.getElementById('victory-modal').classList.contains('show'))return;
+const ev=RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)];
+document.getElementById('event-icon').textContent=ev.icon;document.getElementById('event-title').textContent=ev.title;document.getElementById('event-desc').textContent=ev.desc;
+const box=document.getElementById('event-choices');box.innerHTML='';
+ev.choices.forEach(c=>{const b=document.createElement('button');b.className='btn-action';b.textContent=c.label;b.onclick=()=>{modal.classList.remove('show');c.action();updateHUD()};box.appendChild(b)});
+SoundFX.buy();modal.classList.add('show')}
+setInterval(()=>{if(state.totalEarned>100)triggerRandomEvent()},45000);
+
+function checkMilestones(){let tier=0;STATUS_TIERS.forEach((t,i)=>{if(state.money>=t.min)tier=i});
+if(tier>state.milestoneIndex){state.milestoneIndex=tier;const t=STATUS_TIERS[tier];spawnConfetti();showToast(`🎉 Nouveau Statut : ${t.icon} ${t.name} !`)}
+const cur=STATUS_TIERS[tier];document.getElementById('status-icon').textContent=cur.icon;document.getElementById('status-name').textContent=cur.name;
+document.getElementById('empire-stage').className='empire-stage '+cur.class;
+if(state.money>=1e9&&!state.victoryShown){state.victoryShown=true;spawnConfetti();document.getElementById('victory-modal').classList.add('show')}}
+function closeVictoryModal(){document.getElementById('victory-modal').classList.remove('show')}
+
+function checkAchievements(){const biz=state.businesses.reduce((s,b)=>s+b.count,0),re=state.realEstate.reduce((s,r)=>s+r.count,0),st=state.assets.reduce((s,a)=>s+a.owned,0);
+const rules={first_click:state.totalEarned>=1,thousand:state.money>=1000,biz_boss:biz>=10,landlord:re>=5,trader:st>=1,million:state.money>=1e6,sky_king:state.realEstate[4].count>0,billion:state.money>=1e9};
+let changed=false;state.achievements.forEach(a=>{if(!a.unlocked&&rules[a.id]){a.unlocked=true;changed=true;SoundFX.fanfare();showToast(`🏆 Succès débloqué : ${a.name} !`)}});
+if(changed)renderAchievements()}
+function renderAchievements(){const g=document.getElementById('achievements-grid');g.innerHTML='';let n=0;
+state.achievements.forEach(a=>{if(a.unlocked)n++;const c=document.createElement('div');c.className='item-card';c.style.opacity=a.unlocked?'1':'.45';
+c.innerHTML=`<div class="card-header"><div class="card-icon">${a.icon}</div><div class="card-info"><h3>${a.name}</h3><p style="color:var(--text-muted)">${a.desc}</p></div><div class="card-count">${a.unlocked?'✅':'🔒'}</div></div>`;g.appendChild(c)});
+document.getElementById('ach-counter').textContent=`${n} / ${state.achievements.length}`}
+function showToast(msg){const c=document.getElementById('toast-container'),t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(()=>t.remove(),3500)}
+
+function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');
+document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+if(id==='stocks')setTimeout(()=>{resizeCanvases();renderAssetTabs();drawStockChart();updateMarketHUD()},20)}
+
+function updateButtonsState(){
+state.businesses.forEach((b,i)=>{const btn=document.getElementById(`biz-btn-${i}`);if(btn)btn.disabled=state.money<Math.floor(b.baseCost*Math.pow(1.18,b.count))});
+state.realEstate.forEach((r,i)=>{const bb=document.getElementById(`re-buy-${i}`),rb=document.getElementById(`re-reno-${i}`);
+if(bb)bb.disabled=state.money<Math.floor(r.baseCost*Math.pow(1.25,r.count));
+if(rb)rb.disabled=r.count===0||state.money<Math.floor(r.baseCost*1.8*Math.pow(2.2,r.reno))});
+document.getElementById('upg-click-btn').disabled=state.money<state.clickCost;
+document.getElementById('upg-manager-btn').disabled=state.money<state.managerCost}
+
+function updateHUD(){const gps=getIncomePerSecond(),gpc=getClickPower();
+document.getElementById('gps-display').textContent=`+${fmt(gps)} / sec`;document.getElementById('gpc-display').textContent=`+${fmt(gpc)} / clic`;document.getElementById('btn-click-val').textContent=`+${fmt(gpc)}`;
+document.getElementById('upg-click-cost').textContent=fmt(state.clickCost);document.getElementById('upg-manager-cost').textContent=fmt(state.managerCost);
+const pct=state.money<=0?0:Math.min(100,(Math.log10(state.money+1)/9)*100);
+document.getElementById('goal-bar').style.width=pct.toFixed(2)+'%';document.getElementById('goal-text').textContent=`OBJECTIF MILLIARDAIRE : ${pct.toFixed(1)}%`;
+updateButtonsState()}
+
+const SAVE_KEY='empire_tycoon_save_v1';
+function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state))}catch(e){}}
+function loadGame(){try{const raw=localStorage.getItem(SAVE_KEY);if(raw)state=Object.assign(DEFAULT_STATE(),JSON.parse(raw))}catch(e){state=DEFAULT_STATE()}
+state.displayedMoney=state.money;seedMarketHistory()}
+function resetGame(force=false){
+try{localStorage.removeItem(SAVE_KEY)}catch(e){}
+state=DEFAULT_STATE();seedMarketHistory();closeVictoryModal();renderBusinesses();renderRealEstate();renderAchievements();renderCity();checkMilestones();updateHUD();showToast("Nouvelle partie lancée !")}
+let resetArmed=false,resetTimer=null;
+document.getElementById('reset-btn').onclick=()=>{const b=document.getElementById('reset-btn');
+if(!resetArmed){resetArmed=true;b.textContent='⚠️';showToast('Appuie encore sur ⚠️ pour tout effacer');clearTimeout(resetTimer);resetTimer=setTimeout(()=>{resetArmed=false;b.textContent='🔄'},3500)}
+else{resetArmed=false;clearTimeout(resetTimer);b.textContent='🔄';resetGame(true)}};
+document.getElementById('sound-btn').onclick=e=>{SoundFX.muted=!SoundFX.muted;e.currentTarget.textContent=SoundFX.muted?'🔇':'🔊'};
+
+let coinTick=0;
+setInterval(()=>{const gps=getIncomePerSecond();if(gps>0){addMoney(gps/10,null,null,false);coinTick++;if(coinTick%12===0)spawnParticles(180+Math.random()*Math.max(50,innerWidth-340),120,2,['🪙','💵'])}updateHUD()},100);
+setInterval(tickMarket,1200);
+setInterval(saveGame,2000);
+window.addEventListener('beforeunload',saveGame);
+window.addEventListener('pagehide',saveGame);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
+(function(){try{const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
+const g=x.createLinearGradient(0,0,180,180);g.addColorStop(0,'#1d2330');g.addColorStop(1,'#0a0c10');x.fillStyle=g;x.fillRect(0,0,180,180);
+x.font='110px serif';x.textAlign='center';x.textBaseline='middle';x.fillText('💰',90,98);
+const LOGO='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe066"/><stop offset="1" stop-color="#b45309"/></linearGradient><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d2330"/><stop offset="1" stop-color="#0a0c10"/></linearGradient><radialGradient id="c" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffe066"/><stop offset=".6" stop-color="#f59f00"/><stop offset="1" stop-color="#b45309"/></radialGradient></defs><rect width="512" height="512" rx="112" fill="url(#b)"/><rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#f5b942" stroke-width="6" opacity=".6"/><g fill="#26304a"><rect x="52" y="330" width="46" height="120"/><rect x="106" y="280" width="50" height="170"/><rect x="356" y="300" width="50" height="150"/><rect x="414" y="350" width="46" height="100"/></g><circle cx="256" cy="330" r="96" fill="url(#c)" stroke="#fff3bf" stroke-width="8"/><text x="256" y="372" font-family="Georgia,serif" font-size="120" font-weight="900" text-anchor="middle" fill="#7a4a06">$</text><path d="M150 205 L168 100 L224 160 L256 86 L288 160 L344 100 L362 205 Z" fill="url(#g)" stroke="#fff3bf" stroke-width="5" stroke-linejoin="round"/><rect x="150" y="205" width="212" height="24" rx="8" fill="url(#g)" stroke="#fff3bf" stroke-width="5"/></svg>';
+const im=new Image();im.onload=()=>{x.drawImage(im,0,0,180,180);document.getElementById('app-icon').href=c.toDataURL('image/png')};im.src='data:image/svg+xml;utf8,'+encodeURIComponent(LOGO)}catch(e){}})();
+
+function animationLoop(){const d=state.money-state.displayedMoney;if(Math.abs(d)>.5)state.displayedMoney+=d*.22;else state.displayedMoney=state.money;
+document.getElementById('money-display').textContent=fmt(state.displayedMoney);renderFX();requestAnimationFrame(animationLoop)}
+
+window.addEventListener('DOMContentLoaded',()=>{loadGame();resizeCanvases();renderBusinesses();renderRealEstate();renderAchievements();checkMilestones();updateHUD();requestAnimationFrame(animationLoop)});
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
