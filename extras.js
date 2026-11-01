@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const KEY='empire_extras_v1';
-const D=()=>({coin:null,jobs:{},rigs:[0,0,0,0],subs:0,videos:0,deposit:0,vidReady:0,emp:[0,0,0,0],issues:[],occ:null,nid:1});
+const D=()=>({coin:null,jobs:{},rigs:[0,0,0,0],subs:0,videos:0,deposit:0,vidReady:0,emp:[0,0,0,0],issues:[],occ:null,nid:1,rent:[1,1,1,1,1],rep:60,morale:60,raise:0,insured:false,debt:0,mk:1,mkEnd:0,pubReady:0});
 let X=D();
 try{const r=localStorage.getItem(KEY);if(r)X=Object.assign(D(),JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){}};
@@ -38,14 +38,28 @@ const BIZ_TXT=['Panne de machine','Employé absent','Vol de marchandises','Contr
 const lastCnt=[];
 const occOf=i=>X.occ?X.occ[i]:state.realEstate[i].count;
 const empCost=i=>Math.floor(EMP[i].c*Math.pow(1.3,X.emp[i]));
-const salaryEach=i=>EMP[i].b+_g()*EMP[i].p;
+const salaryEach=i=>(EMP[i].b+_g()*EMP[i].p)*(1+0.2*X.raise);
 const salaries=()=>EMP.reduce((s,e,i)=>s+X.emp[i]*salaryEach(i),0);
 function lossGps(){let L=0;const mm=(1+state.managerLevel*.25)*0.4;
  state.realEstate.forEach((r,i)=>{if(!r.count)return;const unit=r.baseRent*(1+r.reno*.5)*mm,occ=occOf(i),vac=Math.max(0,r.count-occ),iss=X.issues.filter(q=>q.kind==='prop'&&q.idx===i).length;L+=Math.min(r.count,vac+Math.min(occ,iss))*unit});
  state.businesses.forEach((b,i)=>{if(!b.count)return;const iss=X.issues.filter(q=>q.kind==='biz'&&q.idx===i).length;L+=Math.min(b.count,iss)*b.baseIncome*mm});
  return L}
-window.getIncomePerSecond=function(){return Math.max(0,(_g()-lossGps())*(1+0.08*X.emp[2])+extraGps()-salaries())};
-const issueCost=q=>q.kind==='prop'?Math.floor(state.realEstate[q.idx].baseCost*.02+40):Math.floor(state.businesses[q.idx].baseCost*.03+40);
+const RENTM=[.75,1,1.3],RENTP=[.95,.75,.45],RENTL=[.5,1,2],RENTN=['Loyer bas','Loyer normal','Loyer élevé'];
+const MKT=[{n:'Crise immobilière',m:.85,i:'📉'},{n:'Marché stable',m:1,i:'➖'},{n:'Boom immobilier',m:1.15,i:'📈'}];
+function econ(){
+ const mm=(1+state.managerLevel*.25)*0.4;
+ let propG=0,propL=0,bizG=0,bizL=0,rentAdj=0;
+ state.realEstate.forEach((r,i)=>{if(!r.count)return;const unit=r.baseRent*(1+r.reno*.5)*mm,occ=occOf(i),vac=Math.max(0,r.count-occ),iss=X.issues.filter(q=>q.kind==='prop'&&q.idx===i).length,lost=Math.min(r.count,vac+Math.min(occ,iss));
+  propG+=r.count*unit;propL+=lost*unit;rentAdj+=(r.count-lost)*unit*(RENTM[X.rent[i]]-1)});
+ state.businesses.forEach((b,i)=>{if(!b.count)return;const iss=X.issues.filter(q=>q.kind==='biz'&&q.idx===i).length;bizG+=b.count*b.baseIncome*mm;bizL+=Math.min(b.count,iss)*b.baseIncome*mm});
+ const g=_g(),mk=MKT[X.mk].m,repM=0.8+0.4*X.rep/100,tot=X.emp.reduce((a,b)=>a+b,0),prod=tot?0.85+0.15*X.morale/100:1;
+ let inc=g-propL-bizL+rentAdj+(mk-1)*(propG-propL)+(repM-1)*(bizG-bizL);
+ inc*=(1+0.08*X.emp[2])*prod;
+ const charges=Math.max(0,inc)*0.10,sal=salaries(),intr=X.debt*0.0002,ins=X.insured?g*0.03:0,extra=extraGps();
+ return {g,loss:propL+bizL,inc,charges,sal,intr,ins,extra,mk,repM,prod,net:Math.max(0,inc-charges+extra-sal-intr-ins)};
+}
+window.getIncomePerSecond=function(){return econ().net};
+const issueCost=q=>Math.floor((q.kind==='prop'?state.realEstate[q.idx].baseCost*.02+40:state.businesses[q.idx].baseCost*.03+40)*(X.insured?.4:1));
 const tenantCost=i=>Math.floor(30+state.realEstate[i].baseCost*.03);
 function autoTenant(){const v=[];state.realEstate.forEach((r,i)=>{if(r.count>occOf(i))v.push(i)});if(v.length){X.occ[v[Math.floor(Math.random()*v.length)]]++}}
 function fixIssue(id,auto){const k=X.issues.findIndex(q=>q.id===id);if(k<0)return;const q=X.issues[k];
@@ -63,7 +77,14 @@ function worldTick(){
  const now=Date.now();
  for(let k=X.issues.length-1;k>=0;k--){const q=X.issues[k];
   if(q.kind==='prop'&&now-q.t>90000&&Math.random()<.08){X.issues.splice(k,1);if(X.occ[q.idx]>0)X.occ[q.idx]--;showToast('📦 Un locataire est parti à cause du problème non réglé')}}
- if(Math.random()<.01){const o=[];X.occ.forEach((n,i)=>{if(n>0)o.push(i)});if(o.length){X.occ[o[Math.floor(Math.random()*o.length)]]--;showToast('📦 Un locataire a déménagé')}}
+ X.occ.forEach((n,i)=>{if(n>0&&Math.random()<0.004*RENTL[X.rent[i]]*Math.min(n,3)){X.occ[i]--;showToast('📦 Un locataire a déménagé ('+state.realEstate[i].name+')')}});
+ if(now>X.mkEnd){const r=Math.random(),ph=r<.25?0:r<.75?1:2;if(ph!==X.mk||X.mkEnd)showToast(MKT[ph].i+' '+MKT[ph].n+(ph===0?' : loyers -15%':ph===2?' : loyers +15%':''));X.mk=ph;X.mkEnd=now+(90+Math.random()*60)*1000}
+ const tot=X.emp.reduce((a,b)=>a+b,0);
+ X.rep+=(Math.max(0,Math.min(100,70-6*X.issues.length+4*X.emp[2]))-X.rep)*0.04;
+ if(tot){X.morale+=(Math.max(0,Math.min(100,55+9*X.raise-4*X.issues.length))-X.morale)*0.04;
+  if(X.morale<25&&Math.random()<.03){const roles=[];X.emp.forEach((n,i)=>{if(n>0)roles.push(i)});const r=roles[Math.floor(Math.random()*roles.length)];X.emp[r]--;showToast('😠 '+EMP[r].n+' a démissionné (moral trop bas)')}}
+ else X.morale+=(60-X.morale)*0.04;
+ X.rep=Math.max(0,Math.min(100,X.rep));X.morale=Math.max(0,Math.min(100,X.morale));
  for(let k=0;k<X.emp[0];k++)if(Math.random()<.15)autoTenant();
  for(let k=0;k<X.emp[1];k++)if(Math.random()<.2&&X.issues.length)fixIssue(X.issues[0].id,true);
 }
@@ -125,9 +146,17 @@ document.querySelector('nav').appendChild(nb);
 function build(){
  const jobs=JOBS.map(j=>`<div class="item-card"><div class="card-header"><div class="card-icon">${j.i}</div><div class="card-info"><h3>${j.n}</h3><p id="xj-r-${j.id}"></p></div><div class="card-count">${j.d}s</div></div><div class="x-prog"><i id="xj-b-${j.id}"></i></div><div class="card-actions"><button class="btn-action" id="xj-btn-${j.id}" onclick="Extras.job('${j.id}')"></button></div></div>`).join('');
 const emps=EMP.map((e,i)=>`<div class="item-card"><div class="card-header"><div class="card-icon">${e.i}</div><div class="card-info"><h3>${e.n}</h3><p>${e.d}</p></div><div class="card-count" id="xe-n-${i}">x0</div></div><div class="x-sub" style="margin:0" id="xe-s-${i}"></div><div class="x-row"><button class="btn-action" id="xe-h-${i}" onclick="Extras.hire(${i})"></button><button class="btn-action btn-sell" id="xe-f-${i}" onclick="Extras.fire(${i})">Licencier</button></div></div>`).join('');
- const tens=state.realEstate.map((r,i)=>`<div class="item-card" id="xt-card-${i}" style="display:none"><div class="card-header"><div class="card-icon">${r.icon}</div><div class="card-info"><h3>${r.name}</h3><p id="xt-i-${i}"></p></div><div class="card-count" id="xt-n-${i}"></div></div><div class="card-actions"><button class="btn-action" id="xt-btn-${i}" onclick="Extras.tenant(${i})"></button></div></div>`).join('');
+ const tens=state.realEstate.map((r,i)=>`<div class="item-card" id="xt-card-${i}" style="display:none"><div class="card-header"><div class="card-icon">${r.icon}</div><div class="card-info"><h3>${r.name}</h3><p id="xt-i-${i}"></p></div><div class="card-count" id="xt-n-${i}"></div></div><div class="x-row3">${[0,1,2].map(l=>`<button class="chip-btn" id="xt-rb-${i}-${l}" onclick="Extras.rent(${i},${l})">${RENTN[l]}</button>`).join('')}</div><div class="card-actions"><button class="btn-action" id="xt-btn-${i}" onclick="Extras.tenant(${i})"></button></div></div>`).join('');
  const rigs=RIGS.map((r,i)=>`<div class="item-card"><div class="card-header"><div class="card-icon">${r.i}</div><div class="card-info"><h3>${r.n}</h3><p>+${fmt(r.r)} / sec chacun</p></div><div class="card-count" id="xr-n-${i}">x0</div></div><div class="card-actions"><button class="btn-action" id="xr-btn-${i}" onclick="Extras.rig(${i})"></button></div></div>`).join('');
  panel.innerHTML=`
+ <div class="x-sec"><div class="section-title"><span>📊 Gestion de l’empire</span></div>
+  <div class="item-card"><div class="x-sub" style="margin:0" id="xg-rept">⭐ Réputation</div><div class="x-prog"><i id="xg-rep"></i></div>
+  <div class="x-sub" style="margin:8px 0 0" id="xg-mort">😊 Moral de l’équipe</div><div class="x-prog"><i id="xg-mor"></i></div>
+  <div class="x-sub" style="margin:8px 0 0" id="xg-mk"></div></div>
+  <div class="item-card" style="margin-top:12px"><div class="x-sub" style="margin:0;line-height:1.7" id="xg-bil"></div></div>
+  <div class="x-row" style="margin-top:12px"><button class="btn-action" id="xg-pub" onclick="Extras.pub()"></button><button class="btn-action" id="xg-prime" onclick="Extras.prime()"></button><button class="btn-action" id="xg-raise" onclick="Extras.raise()"></button><button class="btn-action btn-secondary" id="xg-ins" onclick="Extras.insure()"></button></div>
+  <div class="item-card" style="margin-top:12px"><div class="card-header"><div class="card-icon">🏦</div><div class="card-info"><h3>Prêt bancaire</h3><p id="xg-debt"></p></div></div>
+  <div class="x-row"><button class="btn-action" id="xg-b1" onclick="Extras.borrow(.25)"></button><button class="btn-action" id="xg-b2" onclick="Extras.borrow(1)"></button><button class="btn-action btn-secondary" id="xg-r1" onclick="Extras.repay(.25)">Rembourser 25%</button><button class="btn-action btn-secondary" id="xg-r2" onclick="Extras.repay(1)">Tout rembourser</button></div></div></div>
  <div class="x-sec"><div class="section-title"><span>👔 Mes employés</span></div><div class="x-sub" id="x-sal"></div><div class="cards-grid">${emps}</div></div>
  <div class="x-sec"><div class="section-title"><span>⚠️ Problèmes en cours</span></div><div class="x-sub">Un problème non réglé te fait perdre des revenus.</div><div class="cards-grid" id="x-issues"></div></div>
  <div class="x-sec"><div class="section-title"><span>🏠 Locataires</span></div><div class="x-sub">Un bien vide ne rapporte rien : cherche des locataires ou engage un gestionnaire.</div><div class="cards-grid">${tens}</div></div>
@@ -190,7 +219,22 @@ function upd(){
  el('x-sv-info').textContent='Épargné : '+fmt(X.deposit)+' • +'+fmt(X.deposit*0.0002)+' / sec (max '+fmt(DEPOSIT_CAP)+')';
 }
 function updWorld(m){
- el('x-sal').textContent='Salaires : -'+fmt(salaries())+' / sec • Pertes (vacance, pannes) : -'+fmt(lossGps())+' / sec';
+
+ const E=econ(),cap=Math.floor(10000+_g()*600),tot=X.emp.reduce((a,b)=>a+b,0);
+ el('x-sal').textContent='Salaires : -'+fmt(E.sal)+' / sec'+(X.raise?' (augmentation niv. '+X.raise+')':'');
+ el('xg-rep').style.width=X.rep+'%';el('xg-rept').textContent='⭐ Réputation des clients : '+Math.round(X.rep)+'% (revenus des entreprises '+(E.repM>=1?'+':'')+Math.round((E.repM-1)*100)+'%)';
+ el('xg-mor').style.width=X.morale+'%';el('xg-mort').textContent='😊 Moral de l’équipe : '+Math.round(X.morale)+'%'+(tot?(X.morale<25?' — ils vont démissionner !':X.morale<45?' — équipe démotivée':''):' (aucun employé)');
+ el('xg-mk').textContent=MKT[X.mk].i+' '+MKT[X.mk].n+' : loyers '+(X.mk===0?'-15%':X.mk===2?'+15%':'normaux');
+ el('xg-bil').innerHTML='<b>Bilan par seconde</b><br>Revenus : +'+fmt(E.g)+'<br>Pertes (vide, pannes) : -'+fmt(E.loss)+'<br>Charges (entretien, énergie) : -'+fmt(E.charges)+'<br>Salaires : -'+fmt(E.sal)+'<br>Intérêts du prêt : -'+fmt(E.intr)+(X.insured?'<br>Assurance : -'+fmt(E.ins):'')+'<br><b style="color:var(--green-bright)">Net : +'+fmt(E.net)+' / sec</b>';
+ const pc=Math.floor(500+_g()*45),prc=Math.floor(E.sal*40+200),rc=Math.floor(3000*Math.pow(2.5,X.raise)),pw=Math.ceil((X.pubReady-Date.now())/1000);
+ el('xg-pub').textContent=pw>0?'📢 Pub… '+pw+'s':'📢 Pub locale • '+fmt(pc);el('xg-pub').disabled=pw>0||m<pc;
+ el('xg-prime').textContent='🎁 Prime équipe • '+fmt(prc);el('xg-prime').disabled=!tot||m<prc;
+ el('xg-raise').textContent=X.raise>=5?'💶 Augmentation max':'💶 Augmenter salaires • '+fmt(rc);el('xg-raise').disabled=X.raise>=5||m<rc;
+ el('xg-ins').textContent=X.insured?'🛡️ Assurance : ACTIVE':'🛡️ Prendre l’assurance';
+ el('xg-debt').textContent='Dette : '+fmt(X.debt)+' • intérêts -'+fmt(X.debt*0.0002)+' / sec • plafond '+fmt(cap);
+ const bc=Math.max(0,Math.floor(cap*.25)),bm=Math.max(0,cap-X.debt);
+ el('xg-b1').textContent='Emprunter '+fmt(Math.min(bc,bm));el('xg-b1').disabled=bm<1;el('xg-b2').textContent='Emprunter max';el('xg-b2').disabled=bm<1;
+ el('xg-r1').disabled=X.debt<1||m<1;el('xg-r2').disabled=X.debt<1||m<X.debt;
  EMP.forEach((e,i)=>{el('xe-n-'+i).textContent='x'+X.emp[i];
   el('xe-s-'+i).textContent=X.emp[i]?'Salaire : '+fmt(salaryEach(i))+' / sec chacun':'Salaire : '+fmt(salaryEach(i))+' / sec';
   const h=el('xe-h-'+i);h.textContent='Engager • '+fmt(empCost(i));h.disabled=m<empCost(i)||X.emp[i]>=MAXE[i];el('xe-f-'+i).disabled=!X.emp[i]});
@@ -203,6 +247,7 @@ function updWorld(m){
  state.realEstate.forEach((r,i)=>{const card=el('xt-card-'+i);card.style.display=r.count?'':'none';if(!r.count)return;
   const occ=occOf(i);el('xt-n-'+i).textContent=occ+'/'+r.count;
   el('xt-i-'+i).textContent=occ>=r.count?'Tous les logements sont loués':(r.count-occ)+' vide(s) – aucun loyer';
+  [0,1,2].forEach(l=>{const rb=el('xt-rb-'+i+'-'+l);if(rb){rb.style.background=X.rent[i]===l?'var(--gold)':'';rb.style.color=X.rent[i]===l?'#000':''}});
   const b=el('xt-btn-'+i);b.textContent='Chercher un locataire • '+fmt(tenantCost(i));b.disabled=occ>=r.count||m<tenantCost(i)})
 }
 function drawCoin(){
@@ -252,11 +297,18 @@ window.Extras={
  sell(f){const a=A();if(!a)return;const q=Math.floor(a.owned*f);if(q<1)return;
   const imp=Math.min(.25,q*a.price/150000),rev=q*a.price*(1-imp/2);a.owned-=q;if(a.owned<=0)a.avgPrice=0;a.price=Math.max(1,a.price*(1-imp));
   addMoney(rev,cx(),300,true);SoundFX.coin();spawnParticles(cx(),300,12,['🪙','💵']);updateHUD();upd()},
+ pub(){const c=Math.floor(500+_g()*45);if(Date.now()<X.pubReady||!spend(c))return;X.rep=Math.min(100,X.rep+15);X.pubReady=Date.now()+20000;SoundFX.coin();showToast('📢 Ta pub fait venir de nouveaux clients !');updateHUD();save();upd()},
+ prime(){const c=Math.floor(econ().sal*40+200);if(!spend(c))return;X.morale=Math.min(100,X.morale+25);SoundFX.coin();showToast('🎁 Ton équipe est ravie de sa prime !');updateHUD();save();upd()},
+ raise(){const c=Math.floor(3000*Math.pow(2.5,X.raise));if(X.raise>=5||!spend(c))return;X.raise++;X.morale=Math.min(100,X.morale+10);SoundFX.buy();showToast('💶 Salaires augmentés (niveau '+X.raise+')');updateHUD();save();upd()},
+ insure(){X.insured=!X.insured;SoundFX.buy();showToast(X.insured?'🛡️ Assuré : réparations à -60%':'Assurance résiliée');save();upd()},
+ borrow(f){const cap=Math.floor(10000+_g()*600),room=Math.max(0,cap-X.debt),a=Math.floor(Math.min(room,f===1?room:cap*f));if(a<1)return;X.debt+=a;state.money+=a;SoundFX.coin();showToast('🏦 Prêt accordé : +'+fmt(a));updateHUD();save();upd()},
+ repay(f){const a=Math.floor(Math.min(X.debt,f===1?X.debt:X.debt*f,state.money));if(a<1)return;state.money-=a;X.debt-=a;SoundFX.buy();showToast('✅ Remboursé : '+fmt(a));updateHUD();save();upd()},
+ rent(i,l){X.rent[i]=l;SoundFX.buy();save();upd()},
  hire(i){const c=empCost(i);if(X.emp[i]>=MAXE[i]||!spend(c))return;X.emp[i]++;SoundFX.buy();showToast('🤝 '+EMP[i].n+' engagé !');updateHUD();save();upd()},
  fire(i){if(!X.emp[i])return;X.emp[i]--;SoundFX.loss();showToast('👋 '+EMP[i].n+' licencié');save();upd()},
  fix(id){fixIssue(id,false);showToast('✅ Problème réglé');save();upd()},
  tenant(i){const r=state.realEstate[i];if(occOf(i)>=r.count||!spend(tenantCost(i)))return;
-  if(Math.random()<.75){X.occ[i]++;SoundFX.coin();showToast('🔑 Locataire trouvé pour ton '+r.name+' !')}else{SoundFX.loss();showToast('😕 Aucun candidat cette fois…')}
+  if(Math.random()<RENTP[X.rent[i]]){X.occ[i]++;SoundFX.coin();showToast('🔑 Locataire trouvé pour ton '+r.name+' !')}else{SoundFX.loss();showToast('😕 Aucun candidat cette fois…')}
   updateHUD();save();upd()},
  job(id){const j=JOBS.find(x=>x.id===id),end=X.jobs[id],now=Date.now();
   if(!end){X.jobs[id]=now+j.d*1000;SoundFX.buy()}
