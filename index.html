@@ -116,6 +116,60 @@ nav{background:#11151e;border-top:2px solid var(--border-gold);display:grid;grid
 #splash .s-title{font-size:1.5rem;font-weight:900;color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,.45);animation:fadeIn .8s .3s both}
 #splash .s-by{font-size:1rem;font-weight:600;color:#94a3b8;letter-spacing:.5px;animation:fadeIn .8s .8s both}
 @keyframes splashPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ===== THEME PREMIUM (style seulement, positions inchangées) ===== */
+body{background:radial-gradient(1200px 600px at 50% -10%,#1b2540 0%,transparent 60%),radial-gradient(800px 500px at 100% 100%,#2a1c0a 0%,transparent 55%),#07090d}
+header{background:linear-gradient(180deg,rgba(30,38,56,.95),rgba(12,15,22,.98));border-bottom:1px solid rgba(245,185,66,.55);box-shadow:0 8px 30px rgba(0,0,0,.65),0 1px 0 rgba(255,215,0,.25)}
+.money-counter{background:linear-gradient(180deg,#fffbe0 0%,#ffd700 50%,#e29a12 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 14px rgba(255,215,0,.5));letter-spacing:.5px}
+.income-stats{letter-spacing:.3px;text-shadow:0 0 10px rgba(52,211,153,.35)}
+.status-badge{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(39,48,66,.9) 40%,rgba(24,30,41,.95));border:1px solid rgba(255,215,0,.7);box-shadow:0 0 16px rgba(245,185,66,.35),inset 0 1px 0 rgba(255,255,255,.2)}
+.icon-btn{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(245,185,66,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 10px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+.goal-bar-container{height:13px;background:#05070a;border:1px solid rgba(255,215,0,.25);box-shadow:inset 0 2px 5px rgba(0,0,0,.8)}
+.goal-bar-fill{box-shadow:0 0 14px rgba(255,215,0,.8)}
+.goal-text{font-size:.62rem;letter-spacing:.8px}
+.empire-stage{border-bottom:1px solid rgba(245,185,66,.55);box-shadow:inset 0 -30px 40px -20px rgba(0,0,0,.6)}
+.empire-stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 50% 120%,rgba(255,215,0,.12),transparent 60%),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45) 100%)}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 28px rgba(245,185,66,.6),0 0 0 0 rgba(255,215,0,.45),inset 0 -6px 12px rgba(0,0,0,.4),inset 0 4px 8px rgba(255,255,255,.35)}50%{box-shadow:0 0 44px rgba(255,215,0,.9),0 0 0 14px rgba(255,215,0,0),inset 0 -6px 12px rgba(0,0,0,.4),inset 0 4px 8px rgba(255,255,255,.35)}}
+#main-click-btn{animation:pulseGlow 2.4s ease-in-out infinite;border:4px solid #fff6c9}
+.btn-sub{background:linear-gradient(180deg,#fff,#ffeaa0);box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.quick-upgrades{background:linear-gradient(160deg,rgba(35,44,64,.78),rgba(12,16,24,.82));border:1px solid rgba(245,185,66,.55);box-shadow:0 10px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12)}
+.upgrade-mini-btn{background:linear-gradient(180deg,#2c3850,#1a2232);border:1px solid rgba(245,185,66,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 8px rgba(0,0,0,.4)}
+main{background:radial-gradient(900px 500px at 50% 0,rgba(35,48,80,.55),transparent 65%),#080a0f}
+main::-webkit-scrollbar{width:6px}main::-webkit-scrollbar-thumb{background:rgba(245,185,66,.45);border-radius:6px}
+.section-title{background:linear-gradient(90deg,#fff3b0,#f5b942 60%,#d98a10);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.4px;padding-bottom:8px;border-bottom:1px solid rgba(245,185,66,.25)}
+.section-title small{-webkit-text-fill-color:var(--text-muted)}
+.item-card{background:linear-gradient(160deg,#242e44 0%,#171d2b 55%,#12161f 100%);border:1px solid rgba(255,255,255,.09);box-shadow:0 8px 20px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+.item-card:hover{border-color:rgba(245,185,66,.75);box-shadow:0 12px 28px rgba(0,0,0,.6),0 0 22px rgba(245,185,66,.16),inset 0 1px 0 rgba(255,255,255,.12)}
+.card-icon{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.18),rgba(0,0,0,.45));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 0 14px rgba(0,0,0,.6),0 4px 10px rgba(0,0,0,.4)}
+.card-info h3{letter-spacing:.2px}
+.card-count{background:linear-gradient(180deg,rgba(255,215,0,.28),rgba(245,185,66,.1));border:1px solid rgba(255,215,0,.6);box-shadow:0 0 10px rgba(245,185,66,.25)}
+.btn-action{background:linear-gradient(180deg,#ffd75e 0%,#f5b942 45%,#c98a14 100%);box-shadow:0 4px 0 #8a5a08,0 8px 16px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.55);text-shadow:0 1px 0 rgba(255,255,255,.35);letter-spacing:.3px;transition:transform .08s,filter .15s,box-shadow .08s}
+.btn-action:hover:not(:disabled){transform:translateY(-1px) scale(1.01);filter:brightness(1.1)}
+.btn-action:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #8a5a08,0 3px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.4)}
+.btn-action:disabled{background:linear-gradient(180deg,#323b4e,#252c3b);box-shadow:0 3px 0 #161b26,inset 0 1px 0 rgba(255,255,255,.06);text-shadow:none;color:#6b7a92}
+.btn-secondary{background:linear-gradient(180deg,#6aa8ff,#3b82f6 50%,#1d4ed8);box-shadow:0 4px 0 #12348f,0 8px 16px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.45);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.btn-buy{background:linear-gradient(180deg,#4ee3ae,#10b981 50%,#047857);box-shadow:0 4px 0 #04523b,0 8px 16px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.4);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.btn-sell{background:linear-gradient(180deg,#ff7878,#ef4444 50%,#b91c1c);box-shadow:0 4px 0 #741010,0 8px 16px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.4);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.market-container,.casino-box{background:linear-gradient(160deg,rgba(36,46,68,.9),rgba(16,20,30,.95));border:1px solid rgba(245,185,66,.5);box-shadow:0 12px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)}
+.market-hud,.bet-controls{background:linear-gradient(180deg,#0f131b,#151b27);border:1px solid rgba(255,255,255,.06);box-shadow:inset 0 2px 8px rgba(0,0,0,.5)}
+.chart-box{background:linear-gradient(180deg,#05070b,#0b1019);border:1px solid rgba(245,185,66,.25);box-shadow:inset 0 0 24px rgba(0,0,0,.7)}
+.asset-tab{background:linear-gradient(180deg,#1a2130,#10141d);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.asset-tab.active{background:linear-gradient(180deg,rgba(255,215,0,.25),rgba(245,185,66,.08));border-color:var(--gold-bright);box-shadow:0 0 16px rgba(245,185,66,.4)}
+.chip-btn{background:linear-gradient(180deg,#34415c,#222b3f);border:1px solid rgba(245,185,66,.35);box-shadow:0 3px 0 #11161f}
+.bet-input,.x-inp{box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 0 12px rgba(245,185,66,.15)}
+.mini-game-card{background:linear-gradient(160deg,#1b2233,#0f131b);border:1px solid rgba(245,185,66,.25);box-shadow:0 8px 20px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+.reel{background:linear-gradient(180deg,#05070a 0%,#27304a 50%,#05070a 100%);box-shadow:inset 0 0 14px #000,0 0 14px rgba(245,185,66,.3)}
+.roulette-wheel{box-shadow:0 0 22px rgba(245,185,66,.5),inset 0 0 14px rgba(0,0,0,.6)}
+nav{background:linear-gradient(180deg,rgba(24,30,44,.97),rgba(10,13,19,.99));border-top:1px solid rgba(245,185,66,.55);box-shadow:0 -10px 30px rgba(0,0,0,.6)}
+.nav-btn{position:relative}
+.nav-btn.active{background:linear-gradient(180deg,rgba(255,215,0,.22),rgba(245,185,66,.05));box-shadow:0 0 18px rgba(245,185,66,.25),inset 0 1px 0 rgba(255,255,255,.12)}
+.nav-btn.active::before{content:"";position:absolute;top:-7px;left:25%;right:25%;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,#ffd700,transparent);box-shadow:0 0 10px #ffd700}
+.nav-btn.active .nav-icon{filter:drop-shadow(0 0 8px rgba(255,215,0,.8))}
+.modal-card{background:linear-gradient(160deg,#27324c,#121722);border:1px solid rgba(255,215,0,.8);box-shadow:0 0 60px rgba(245,185,66,.4),0 20px 50px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
+.modal-title{background:linear-gradient(180deg,#fff7c2,#ffd700 60%,#e29a12);-webkit-background-clip:text;background-clip:text;color:transparent}
+.toast{background:linear-gradient(135deg,rgba(40,50,72,.96),rgba(14,18,27,.97));border:1px solid rgba(245,185,66,.4);border-left:4px solid var(--gold-bright);box-shadow:0 10px 24px rgba(0,0,0,.55),0 0 16px rgba(245,185,66,.18)}
+.x-prog{box-shadow:inset 0 2px 5px rgba(0,0,0,.7)}.x-prog>i{box-shadow:0 0 10px rgba(255,215,0,.7)}
+.x-emojis button{background:linear-gradient(180deg,#1d2536,#12161f)}
 </style>
 </head>
 <body>
