@@ -29,12 +29,32 @@ window.getIncomePerSecond=function(){return _g()+extraGps()};
 
 /* Recommencer la partie => reset des extras aussi */
 const _rs=window.resetGame;
-window.resetGame=function(f){_rs(f);X=D();save();build();upd()};
+window.resetGame=function(f){_rs(f);X=D();save();ensureAssets();build();upd()};
+const _ld=window.loadGame;window.loadGame=function(){_ld();ensureAssets()};
 
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fp=p=>p>=1000?fmt(p):p.toFixed(p<1?3:2)+' $';
 const spend=c=>{if(state.money<c)return false;state.money-=c;return true};
-const coinVal=()=>X.coin?X.coin.held*X.coin.price:0;
+const A=()=>state.assets.find(a=>a.id==='mycoin');
+const coinVal=()=>{const a=A();return X.coin&&a?a.owned*a.price:0};
+const NEWCOINS=[
+ {id:'eth',name:'Etheria (ETHA)',price:1200,volatility:.09},
+ {id:'sol',name:'SolarChain (SLR)',price:85,volatility:.11},
+ {id:'ai',name:'AI Token (AIT)',price:320,volatility:.13},
+ {id:'doge',name:'DogeMoon (DGM)',price:12,volatility:.17},
+ {id:'shib',name:'ShibaRocket (SHR)',price:7,volatility:.22},
+ {id:'nft',name:'NFT Galaxy (NFTG)',price:45,volatility:.25},
+ {id:'usds',name:'StableCoin (USDS)',price:100,volatility:.004}];
+function mkHist(p,v){const h=[];for(let i=0;i<45;i++){p=Math.max(5,p*(1+(Math.random()-.49)*v));h.push(p)}return h}
+function ensureAssets(){
+ if(!state||!state.assets)return;
+ NEWCOINS.forEach(n=>{if(!state.assets.some(a=>a.id===n.id)){const h=mkHist(n.price,n.volatility);state.assets.push({id:n.id,name:n.name,price:h[h.length-1],history:h,volatility:n.volatility,owned:0,avgPrice:0})}});
+ const c=X.coin;
+ if(c){let a=A();
+  if(!a){const p=c.price||5;a={id:'mycoin',name:'',price:p,history:c.hist||Array(45).fill(p),volatility:0,owned:c.held||0,avgPrice:p};state.assets.push(a)}
+  if(c.held!==undefined){delete c.held;delete c.price;delete c.hist}
+  a.name=c.emoji+' '+c.name+' ('+c.sym+')';a.volatility=0}
+}
 const jobReward=j=>Math.floor(j.b+_g()*j.d*0.5);
 const rigCost=i=>Math.floor(RIGS[i].c*Math.pow(1.2,X.rigs[i]));
 const vidCost=()=>Math.floor(100*Math.pow(1.1,X.videos));
@@ -102,8 +122,8 @@ function upd(){
  if(!panel.classList.contains('active'))return;
  renderCoin();
  const now=Date.now(),m=state.money;
- if(X.coin){const c=X.coin;
-  el('x-c-price').textContent=fp(c.price);el('x-c-held').textContent=Math.floor(c.held).toLocaleString('fr-FR');
+ if(X.coin&&A()){const c=X.coin,a=A();
+  el('x-c-price').textContent=fp(a.price);el('x-c-held').textContent=Math.floor(a.owned).toLocaleString('fr-FR');
   el('x-c-val').textContent=fmt(coinVal());el('x-c-hypev').textContent=Math.round(c.hype)+'%';el('x-c-hype').style.width=c.hype+'%';
   const mc=Math.floor(400+coinVal()*.03),ic=Math.floor(2500+coinVal()*.06);
   el('x-mk').textContent='📣 Marketing • '+fmt(mc);el('x-mk').disabled=m<mc;
@@ -123,9 +143,9 @@ function upd(){
  el('x-sv-info').textContent='Épargné : '+fmt(X.deposit)+' • +'+fmt(X.deposit*0.0002)+' / sec (max '+fmt(DEPOSIT_CAP)+')';
 }
 function drawCoin(){
- const cv=el('x-c-cv');if(!cv||!X.coin)return;const p=cv.parentElement;
+ const cv=el('x-c-cv');if(!cv||!X.coin||!A())return;const p=cv.parentElement;
  cv.width=p.clientWidth||300;cv.height=p.clientHeight||130;
- const c=cv.getContext('2d'),h=X.coin.hist,w=cv.width,H=cv.height;
+ const c=cv.getContext('2d'),h=A().history,w=cv.width,H=cv.height;
  const mn=Math.min(...h)*.95,mx=Math.max(...h)*1.05,rg=Math.max(1e-9,mx-mn);
  c.beginPath();h.forEach((v,i)=>{const x=i/(h.length-1)*(w-16)+8,y=H-10-((v-mn)/rg)*(H-20);i?c.lineTo(x,y):c.moveTo(x,y)});
  c.strokeStyle=h[h.length-1]>=h[0]?'#10b981':'#ef4444';c.lineWidth=3;c.stroke();
@@ -133,14 +153,13 @@ function drawCoin(){
 
 /* ---------- Marché de ta crypto ---------- */
 setInterval(()=>{
- const c=X.coin;if(!c)return;
+ const c=X.coin,a=A();if(!c||!a)return;
  const drift=(c.hype-35)/35*0.008,noise=(Math.random()-.5)*0.07;
- c.price=Math.max(0.01,c.price*(1+drift+noise));
+ a.price=Math.max(1,a.price*(1+drift+noise));
  const r=Math.random(),pump=0.012+c.hype/100*0.012;
- if(r<pump){c.price*=1.5;c.hype=Math.min(100,c.hype+10);showToast('🚀 '+c.sym+' devient viral ! +50%')}
- else if(r<pump+0.014){c.price*=0.55;c.hype=Math.max(0,c.hype-20);showToast('💥 Scandale ! '+c.sym+' s’effondre (-45%)')}
+ if(r<pump){a.price*=1.5;c.hype=Math.min(100,c.hype+10);showToast('🚀 '+c.sym+' devient viral ! +50%')}
+ else if(r<pump+0.014){a.price=Math.max(1,a.price*0.55);c.hype=Math.max(0,c.hype-20);showToast('💥 Scandale ! '+c.sym+' s’effondre (-45%)')}
  c.hype=Math.max(0,Math.min(100,c.hype*0.985));
- c.hist.push(c.price);if(c.hist.length>60)c.hist.shift();
 },1200);
 setInterval(upd,400);
 setInterval(save,2000);
@@ -154,20 +173,20 @@ window.Extras={
   const name=(el('x-name').value.trim()||'MaCoin').slice(0,16);
   const sym=(el('x-sym').value.toUpperCase().replace(/[^A-Z]/g,'')||name.toUpperCase().replace(/[^A-Z]/g,'').slice(0,3)||'COIN').slice(0,4);
   if(!spend(LAUNCH_COST)){showToast('Pas assez d’argent pour lancer ta crypto');return}
-  X.coin={name,sym,emoji:pick,price:0.5,hist:Array(40).fill(0.5),hype:20,held:4000};
-  SoundFX.fanfare();spawnConfetti();showToast('🎉 '+name+' ('+sym+') est lancée !');
+  X.coin={name,sym,emoji:pick,hype:20};ensureAssets();const na=A();na.price=5;na.history=Array(45).fill(5);na.owned=400;na.avgPrice=5;
+  SoundFX.fanfare();spawnConfetti();showToast('🎉 '+name+' ('+sym+') est lancée ! Retrouve-la aussi dans Bourse');
   lastCoin=undefined;renderCoin();updateHUD();save();upd();
  },
  mk(){const c=X.coin,cost=Math.floor(400+coinVal()*.03);if(!spend(cost))return;
-  c.hype=Math.min(100,c.hype+15);c.price*=1.02;SoundFX.buy();showToast('📣 Campagne lancée !');updateHUD();upd()},
+  c.hype=Math.min(100,c.hype+15);A().price*=1.02;SoundFX.buy();showToast('📣 Campagne lancée !');updateHUD();upd()},
  inf(){const c=X.coin,cost=Math.floor(2500+coinVal()*.06);if(!spend(cost))return;
   if(Math.random()<.35){c.hype=Math.min(100,c.hype+5);SoundFX.loss();showToast('😬 L’influenceur a fait un flop…')}
-  else{c.hype=Math.min(100,c.hype+35);c.price*=1.08;SoundFX.coin();spawnParticles(cx(),300,14,['🤳','🚀','✨']);showToast('🤳 Ton influenceur fait le buzz !')}
+  else{c.hype=Math.min(100,c.hype+35);A().price*=1.08;SoundFX.coin();spawnParticles(cx(),300,14,['🤳','🚀','✨']);showToast('🤳 Ton influenceur fait le buzz !')}
   updateHUD();upd()},
- buy(f){const c=X.coin,amt=Math.floor(state.money*f),q=Math.floor(amt/c.price);if(q<1)return;
-  const cost=q*c.price;state.money-=cost;c.held+=q;c.price*=1+Math.min(.25,cost/150000);SoundFX.buy();updateHUD();upd()},
- sell(f){const c=X.coin,q=Math.floor(c.held*f);if(q<1)return;
-  const rev=q*c.price;c.held-=q;c.price=Math.max(0.01,c.price*(1-Math.min(.25,rev/150000)));
+ buy(f){const a=A();if(!a)return;const amt=Math.floor(state.money*f),imp=Math.min(.25,amt/150000),unit=a.price*(1+imp/2),q=Math.floor(amt/unit);if(q<1)return;
+  const cost=q*unit;state.money-=cost;a.avgPrice=(a.owned*a.avgPrice+cost)/(a.owned+q);a.owned+=q;a.price*=1+imp;SoundFX.buy();updateHUD();upd()},
+ sell(f){const a=A();if(!a)return;const q=Math.floor(a.owned*f);if(q<1)return;
+  const imp=Math.min(.25,q*a.price/150000),rev=q*a.price*(1-imp/2);a.owned-=q;if(a.owned<=0)a.avgPrice=0;a.price=Math.max(1,a.price*(1-imp));
   addMoney(rev,cx(),300,true);SoundFX.coin();spawnParticles(cx(),300,12,['🪙','💵']);updateHUD();upd()},
  job(id){const j=JOBS.find(x=>x.id===id),end=X.jobs[id],now=Date.now();
   if(!end){X.jobs[id]=now+j.d*1000;SoundFX.buy()}
@@ -181,5 +200,6 @@ window.Extras={
  dep(f){const a=Math.min(Math.floor(state.money*f),DEPOSIT_CAP-X.deposit);if(a<1)return;state.money-=a;X.deposit+=a;SoundFX.buy();updateHUD();upd()},
  wd(){if(X.deposit<1)return;state.money+=X.deposit;X.deposit=0;SoundFX.coin();updateHUD();upd()}
 };
+ensureAssets();
 build();
 })();
