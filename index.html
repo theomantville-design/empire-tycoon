@@ -437,7 +437,7 @@ function renderAssetTabs(){const c=document.getElementById('asset-tabs');c.inner
 state.assets.forEach((a,i)=>{const b=document.createElement('button');b.className='asset-tab'+(state.selectedAsset===i?' active':'');
 b.innerHTML=`${a.name}<br><span style="color:var(--gold)">${fmt(a.price)}</span>`;
 b.onclick=()=>{state.selectedAsset=i;renderAssetTabs();drawStockChart();updateMarketHUD()};c.appendChild(b)})}
-function tickMarket(){state.assets.forEach(a=>{const d=(Math.random()-.488)*2*a.volatility;a.price=Math.max(5,a.price*(1+d));a.history.push(a.price);if(a.history.length>50)a.history.shift()});
+function tickMarket(){state.assets.forEach(a=>{if(a.id==='mycoin'){a.history.push(a.price);if(a.history.length>50)a.history.shift();return}const d=(Math.random()-.488)*2*a.volatility;a.price=Math.max(5,a.price*(1+d));a.history.push(a.price);if(a.history.length>50)a.history.shift()});
 if(document.getElementById('tab-stocks').classList.contains('active')){renderAssetTabs();drawStockChart();updateMarketHUD()}}
 function drawStockChart(){const canvas=document.getElementById('stock-canvas'),ctx=canvas.getContext('2d');if(canvas.width===0)resizeCanvases();
 const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const hist=state.assets[state.selectedAsset].history;if(hist.length<2)return;
