@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const KEY='empire_extras_v1';
-const D=()=>({coin:null,jobs:{},rigs:[0,0,0,0],subs:0,videos:0,deposit:0,vidReady:0,emp:[0,0,0,0],issues:[],occ:null,nid:1,skill:[0,0,0,0],salm:[0,0,0,0],cand:null,asst:false,auto:true,alog:'',intReady:0,rent:[1,1,1,1,1],rep:60,morale:60,raise:0,insured:false,debt:0,mk:1,mkEnd:0,pubReady:0});
+const D=()=>({coin:null,jobs:{},rigs:[0,0,0,0],subs:0,videos:0,deposit:0,vidReady:0,emp:[0,0,0,0],issues:[],occ:null,nid:1,hackReady:0,mintReady:0,skill:[0,0,0,0],salm:[0,0,0,0],cand:null,asst:false,auto:true,alog:'',intReady:0,rent:[1,1,1,1,1],rep:60,morale:60,raise:0,insured:false,debt:0,mk:1,mkEnd:0,pubReady:0});
 let X=D();
 try{const r=localStorage.getItem(KEY);if(r)X=Object.assign(D(),JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(X))}catch(e){}};
@@ -71,6 +71,63 @@ const tenantCost=i=>Math.floor(30+state.realEstate[i].baseCost*.03);
 function autoTenant(){const v=[];state.realEstate.forEach((r,i)=>{if(r.count>occOf(i))v.push(i)});if(v.length){X.occ[v[Math.floor(Math.random()*v.length)]]++}}
 function fixIssue(id,auto){const k=X.issues.findIndex(q=>q.id===id);if(k<0)return;const q=X.issues[k];
  if(!auto&&!spend(issueCost(q)))return;X.issues.splice(k,1);if(!auto){SoundFX.buy();updateHUD()}}
+/* ===== Marché de ta crypto : profondeur de liquidité ===== */
+const depth=()=>{const a=A();return 20000+(a&&X.coin?a.price*X.coin.supply*0.05+X.coin.hype*200:0)};
+function coinBuyQty(q){const a=A();q=Math.floor(q);if(!a||q<1)return false;const imp=Math.min(1.5,q*a.price/depth()),cost=q*a.price*(1+imp/2);
+ if(state.money<cost)return false;state.money-=cost;a.avgPrice=(a.owned*a.avgPrice+cost)/(a.owned+q);a.owned+=q;a.price*=1+imp;
+ SoundFX.buy();updateHUD();if(typeof updateMarketHUD==='function')updateMarketHUD();upd();return true}
+function coinSellQty(q){const a=A();q=Math.floor(q);if(!a||q<1||a.owned<q)return false;const V=q*a.price,d=depth(),f=d/(d+V),rev=V*(1+f)/2;
+ a.owned-=q;if(a.owned<=0)a.avgPrice=0;a.price=Math.max(1,a.price*f);addMoney(rev,cx(),300,true);SoundFX.coin();spawnParticles(cx(),300,12,['🪙','💵']);
+ updateHUD();if(typeof updateMarketHUD==='function')updateMarketHUD();upd();return true}
+const _bA=window.buyAsset,_sA=window.sellAsset;
+window.buyAsset=function(q){const a=state.assets[state.selectedAsset];if(a&&a.id==='mycoin'&&X.coin){if(!coinBuyQty(q))showToast('Pas assez d’argent (frais de marché inclus)');checkAchievements()}else _bA(q)};
+window.sellAsset=function(q){const a=state.assets[state.selectedAsset];if(a&&a.id==='mycoin'&&X.coin){coinSellQty(q)}else _sA(q)};
+
+/* ===== Piratage de crypto ===== */
+const HACKS=[{id:'btc',d:4},{id:'eth',d:4},{id:'sol',d:3},{id:'ai',d:3},{id:'doge',d:2},{id:'shib',d:2},{id:'nft',d:2},{id:'usds',d:5}];
+const hackCost=d=>300*d*d;
+const hackReward=d=>Math.floor((1500+_g()*50)*(0.6+0.5*d));
+const PADC=['#ef4444','#22c55e','#3b82f6','#eab308'];
+const ov=document.createElement('div');ov.id='x-hack';
+ov.style.cssText='position:fixed;inset:0;z-index:1500;background:rgba(0,12,4,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#4ade80;font-family:monospace;padding:20px;text-align:center';
+ov.innerHTML='<div style="font-size:1.15rem;font-weight:900" id="xh-title"></div><div id="xh-msg" style="min-height:48px;font-size:.95rem"></div><div id="xh-pads" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:min(320px,85vw)"></div><div id="xh-prog" style="letter-spacing:5px;font-size:1.1rem"></div><button class="chip-btn" id="xh-quit">Abandonner</button>';
+document.body.appendChild(ov);
+let hk=null;
+function padFlash(k,ms){const p=document.getElementById('xh-pad'+k);if(!p)return;p.style.filter='brightness(2.4)';p.style.transform='scale(1.07)';setTimeout(()=>{p.style.filter='';p.style.transform=''},ms)}
+function hackStart(id){
+ const H=HACKS.find(h=>h.id===id),a=state.assets.find(x=>x.id===id);
+ if(!H||!a||hk||Date.now()<X.hackReady)return;
+ const cost=hackCost(H.d);if(!spend(cost))return;updateHUD();
+ const len=4+H.d,spd=Math.max(260,680-85*H.d);
+ hk={H,a,cost,len,pos:0,input:false,seq:Array.from({length:len},()=>Math.floor(Math.random()*4)),ended:false};
+ document.getElementById('xh-title').textContent='💻 PIRATAGE : '+a.name;
+ document.getElementById('xh-pads').innerHTML=PADC.map((c,k)=>`<button id="xh-pad${k}" style="height:90px;border:none;border-radius:16px;background:${c};transition:filter .08s,transform .08s;cursor:pointer" onclick="Extras._pad(${k})"></button>`).join('');
+ document.getElementById('xh-prog').textContent='';
+ document.getElementById('xh-msg').textContent='Mémorise la séquence de sécurité… ('+len+' codes)';
+ ov.style.display='flex';SoundFX.buy();
+ let i=0;const step=()=>{if(!hk||hk.ended)return;if(i>=len){hk.input=true;document.getElementById('xh-msg').textContent='À toi ! Répète la séquence.';return}
+  padFlash(hk.seq[i],spd-80);SoundFX.playTone&&SoundFX.playTone(300+hk.seq[i]*120,'square',.1,.06);i++;setTimeout(step,spd+170)};
+ setTimeout(step,900);
+}
+function hackPad(k){
+ if(!hk||!hk.input||hk.ended)return;padFlash(k,140);SoundFX.playTone&&SoundFX.playTone(300+k*120,'square',.1,.08);
+ if(k!==hk.seq[hk.pos])return hackEnd(false,'❌ Mauvaise séquence ! Accès refusé.');
+ hk.pos++;document.getElementById('xh-prog').textContent='■'.repeat(hk.pos)+'□'.repeat(hk.len-hk.pos);
+ if(hk.pos>=hk.len){if(Math.random()<0.03*hk.H.d)hackEnd(false,'🚨 Le pare-feu t’a repéré en pleine intrusion !');else hackEnd(true)}
+}
+function hackEnd(ok,why){
+ if(!hk||hk.ended)return;hk.ended=true;hk.input=false;const {H,a,cost}=hk,msg=document.getElementById('xh-msg');
+ if(ok){const reward=hackReward(H.d),tokens=Math.max(1,Math.floor(reward/a.price));a.owned+=tokens;a.price=Math.max(5,a.price*0.92);X.hackReady=Date.now()+45000;
+  msg.textContent='✅ PIRATAGE RÉUSSI ! +'+tokens.toLocaleString('fr-FR')+' tokens ('+fmt(reward)+')';SoundFX.fanfare();spawnConfetti()}
+ else{const fine=Math.floor(cost*1.5);X.hackReady=Date.now()+90000;msg.textContent=why+' Amende : -'+fmt(fine)+' (cache-toi 90s)';loseMoney(fine,'Amende')}
+ setTimeout(()=>{ov.style.display='none';hk=null;updateHUD();save();upd()},2300);
+}
+document.getElementById('xh-quit').onclick=()=>{if(hk&&!hk.ended){hk.ended=true;hk=null;X.hackReady=Date.now()+20000}ov.style.display='none';save();upd()};
+function updHack(m){const now=Date.now(),wait=Math.ceil((X.hackReady-now)/1000);
+ HACKS.forEach(h=>{const a=state.assets.find(x=>x.id===h.id),card=el('xh-card-'+h.id);if(!card)return;card.style.display=a?'':'none';if(!a)return;
+  el('xh-n-'+h.id).textContent=a.name;el('xh-p-'+h.id).textContent='Prix '+fmt(a.price)+' • gain ≈ '+fmt(hackReward(h.d));
+  const b=el('xh-b-'+h.id);b.textContent=wait>0?'⏳ Planqué… '+wait+'s':'💻 Hacker • '+fmt(hackCost(h.d));b.disabled=wait>0||m<hackCost(h.d)||!!hk})}
+
 function removeEmp(i){const n=X.emp[i];if(n<=0)return;const f=(n-1)/n;X.skill[i]*=f;X.salm[i]*=f;X.emp[i]--;if(!X.emp[i]){X.skill[i]=0;X.salm[i]=0}}
 function startInterview(i,auto){if(X.cand||X.emp[i]>=MAXE[i]||!spend(INT_COST))return false;
  const r=Math.random(),st=r<.15?1:r<.40?2:r<.70?3:r<.90?4:5,sm=Math.max(.7,Math.min(1.5,.8+.1*st+(Math.random()-.5)*.2));
@@ -147,7 +204,7 @@ function ensureAssets(){
  if(c){let a=A();
   if(!a){const p=c.price||5;a={id:'mycoin',name:'',price:p,history:c.hist||Array(45).fill(p),volatility:0,owned:c.held||0,avgPrice:p};state.assets.push(a)}
   if(c.held!==undefined){delete c.held;delete c.price;delete c.hist}
-  a.name=c.emoji+' '+c.name+' ('+c.sym+')';a.volatility=0}
+  a.name=c.emoji+' '+c.name+' ('+c.sym+')';a.volatility=0;if(!c.supply)c.supply=Math.max(10000,Math.floor((a.owned||0)*5))}
 }
 const jobReward=j=>Math.floor(j.b+_g()*j.d*0.5);
 const rigCost=i=>Math.floor(RIGS[i].c*Math.pow(1.2,X.rigs[i]));
@@ -179,6 +236,7 @@ function build(){
  const jobs=JOBS.map(j=>`<div class="item-card"><div class="card-header"><div class="card-icon">${j.i}</div><div class="card-info"><h3>${j.n}</h3><p id="xj-r-${j.id}"></p></div><div class="card-count">${j.d}s</div></div><div class="x-prog"><i id="xj-b-${j.id}"></i></div><div class="card-actions"><button class="btn-action" id="xj-btn-${j.id}" onclick="Extras.job('${j.id}')"></button></div></div>`).join('');
 const emps=EMP.map((e,i)=>`<div class="item-card"><div class="card-header"><div class="card-icon">${e.i}</div><div class="card-info"><h3>${e.n}</h3><p>${e.d}</p></div><div class="card-count" id="xe-n-${i}">x0</div></div><div class="x-sub" style="margin:0" id="xe-s-${i}"></div><div class="x-row"><button class="btn-action" id="xe-h-${i}" onclick="Extras.hire(${i})"></button><button class="btn-action btn-sell" id="xe-f-${i}" onclick="Extras.fire(${i})">Licencier</button></div></div>`).join('');
  const tens=state.realEstate.map((r,i)=>`<div class="item-card" id="xt-card-${i}" style="display:none"><div class="card-header"><div class="card-icon">${r.icon}</div><div class="card-info"><h3>${r.name}</h3><p id="xt-i-${i}"></p></div><div class="card-count" id="xt-n-${i}"></div></div><div class="x-row3">${[0,1,2].map(l=>`<button class="chip-btn" id="xt-rb-${i}-${l}" onclick="Extras.rent(${i},${l})">${RENTN[l]}</button>`).join('')}</div><div class="card-actions"><button class="btn-action" id="xt-btn-${i}" onclick="Extras.tenant(${i})"></button></div></div>`).join('');
+ const hkc=HACKS.map(h=>`<div class="item-card" id="xh-card-${h.id}"><div class="card-header"><div class="card-icon">💻</div><div class="card-info"><h3 id="xh-n-${h.id}"></h3><p id="xh-p-${h.id}"></p></div><div class="card-count">${'★'.repeat(h.d)}</div></div><div class="card-actions"><button class="btn-action btn-sell" id="xh-b-${h.id}" onclick="Extras.hack('${h.id}')"></button></div></div>`).join('');
  const rigs=RIGS.map((r,i)=>`<div class="item-card"><div class="card-header"><div class="card-icon">${r.i}</div><div class="card-info"><h3>${r.n}</h3><p>+${fmt(r.r)} / sec chacun</p></div><div class="card-count" id="xr-n-${i}">x0</div></div><div class="card-actions"><button class="btn-action" id="xr-btn-${i}" onclick="Extras.rig(${i})"></button></div></div>`).join('');
  panel.innerHTML=`
  <div class="x-sec"><div class="section-title"><span>🧑‍💼 Ton assistant</span></div><div id="x-asst"></div></div>
@@ -195,6 +253,7 @@ const emps=EMP.map((e,i)=>`<div class="item-card"><div class="card-header"><div 
  <div class="x-sec"><div class="section-title"><span>🏠 Locataires</span></div><div class="x-sub">Un bien vide ne rapporte rien : cherche des locataires ou engage un gestionnaire.</div><div class="cards-grid">${tens}</div></div>
  <div class="x-sec"><div class="section-title"><span>🪙 Ma propre Crypto</span></div><div id="x-coin"></div></div>
  <div class="x-sec"><div class="section-title"><span>⚡ Jobs rapides</span></div><div class="x-sub">Lance une mission, reviens récupérer la paie (même app fermée).</div><div class="cards-grid" id="x-jobs">${jobs}</div></div>
+ <div class="x-sec"><div class="section-title"><span>💻 Piratage de crypto</span></div><div class="x-sub">Réussis la séquence de sécurité pour voler des tokens. Plus il y a d’étoiles, plus c’est dur. Un échec = amende + cache-toi.</div><div class="cards-grid">${hkc}</div></div>
  <div class="x-sec"><div class="section-title"><span>⛏️ Minage de crypto</span></div><div class="x-sub">Des machines qui minent pour toi, 24h/24.</div><div class="cards-grid">${rigs}</div></div>
  <div class="x-sec"><div class="section-title"><span>🎬 Chaîne YouTube</span></div>
   <div class="item-card"><div class="card-header"><div class="card-icon">📺</div><div class="card-info"><h3>Ta chaîne</h3><p id="x-yt-info"></p></div><div class="card-count" id="x-yt-subs"></div></div><div class="card-actions"><button class="btn-action" id="x-yt-btn" onclick="Extras.video()"></button></div></div></div>
@@ -220,6 +279,8 @@ function renderCoin(){
   <div class="chart-box" style="height:130px"><canvas id="x-c-cv"></canvas></div>
   <div class="market-hud"><div class="stat-box"><span class="stat-label">Prix</span><span class="stat-val" id="x-c-price"></span></div><div class="stat-box"><span class="stat-label">Tes tokens</span><span class="stat-val" id="x-c-held"></span></div><div class="stat-box"><span class="stat-label">Valeur</span><span class="stat-val" id="x-c-val"></span></div><div class="stat-box"><span class="stat-label">Hype</span><span class="stat-val" id="x-c-hypev"></span></div></div>
   <div class="x-prog"><i id="x-c-hype"></i></div>
+  <div class="x-sub" style="margin:0" id="x-c-sup"></div>
+  <div class="x-row3"><button class="btn-action btn-sell" onclick="Extras.burn(.25)">🔥 Brûler 25%</button><button class="btn-action" id="x-mint1" onclick="Extras.mint(.1)">🏭 Frapper +10%</button><button class="btn-action" id="x-mint2" onclick="Extras.mint(.5)">🏭 Frapper +50%</button></div>
   <div class="x-row"><button class="btn-action btn-secondary" id="x-mk" onclick="Extras.mk()"></button><button class="btn-action btn-secondary" id="x-inf" onclick="Extras.inf()"></button></div>
   <div class="x-row"><button class="btn-action btn-buy" onclick="Extras.buy(.25)">ACHETER 25% cash</button><button class="btn-action btn-buy" onclick="Extras.buy(1)">ACHETER MAX</button><button class="btn-action btn-sell" onclick="Extras.sell(.25)">VENDRE 25%</button><button class="btn-action btn-sell" onclick="Extras.sell(1)">TOUT VENDRE</button></div></div>`;
  }
@@ -230,13 +291,15 @@ function upd(){
  if(!panel.classList.contains('active'))return;
  renderCoin();
  const now=Date.now(),m=state.money;
- updWorld(m);
+ updWorld(m);updHack(m);
  if(X.coin&&A()){const c=X.coin,a=A();
   el('x-c-price').textContent=fp(a.price);el('x-c-held').textContent=Math.floor(a.owned).toLocaleString('fr-FR');
   el('x-c-val').textContent=fmt(coinVal());el('x-c-hypev').textContent=Math.round(c.hype)+'%';el('x-c-hype').style.width=c.hype+'%';
   const mc=Math.floor(400+coinVal()*.03),ic=Math.floor(2500+coinVal()*.06);
   el('x-mk').textContent='📣 Marketing • '+fmt(mc);el('x-mk').disabled=m<mc;
   el('x-inf').textContent='🤳 Influenceur • '+fmt(ic);el('x-inf').disabled=m<ic;
+  el('x-c-sup').textContent='Tokens en circulation : '+c.supply.toLocaleString('fr-FR')+' • Capitalisation : '+fmt(a.price*c.supply)+' • Ta part : '+(a.owned/c.supply*100).toFixed(1)+'%';
+  const mw=Math.ceil((X.mintReady-Date.now())/1000);[['x-mint1','+10%'],['x-mint2','+50%']].forEach(([id,t])=>{const b=el(id);b.disabled=mw>0;b.textContent=mw>0?'⏳ '+mw+'s':'🏭 Frapper '+t});
   drawCoin();
  }else{const b=el('x-launch');if(b)b.disabled=m<LAUNCH_COST}
  JOBS.forEach(j=>{const end=X.jobs[j.id],btn=el('xj-btn-'+j.id),bar=el('xj-b-'+j.id);
@@ -321,7 +384,7 @@ window.Extras={
   const name=(el('x-name').value.trim()||'MaCoin').slice(0,16);
   const sym=(el('x-sym').value.toUpperCase().replace(/[^A-Z]/g,'')||name.toUpperCase().replace(/[^A-Z]/g,'').slice(0,3)||'COIN').slice(0,4);
   if(!spend(LAUNCH_COST)){showToast('Pas assez d’argent pour lancer ta crypto');return}
-  X.coin={name,sym,emoji:pick,hype:20};ensureAssets();const na=A();na.price=5;na.history=Array(45).fill(5);na.owned=400;na.avgPrice=5;
+  X.coin={name,sym,emoji:pick,hype:20,supply:10000};ensureAssets();const na=A();na.price=5;na.history=Array(45).fill(5);na.owned=400;na.avgPrice=5;
   SoundFX.fanfare();spawnConfetti();showToast('🎉 '+name+' ('+sym+') est lancée ! Retrouve-la aussi dans Bourse');
   lastCoin=undefined;renderCoin();updateHUD();save();upd();
  },
@@ -331,11 +394,18 @@ window.Extras={
   if(Math.random()<.35){c.hype=Math.min(100,c.hype+5);SoundFX.loss();showToast('😬 L’influenceur a fait un flop…')}
   else{c.hype=Math.min(100,c.hype+35);A().price*=1.08;SoundFX.coin();spawnParticles(cx(),300,14,['🤳','🚀','✨']);showToast('🤳 Ton influenceur fait le buzz !')}
   updateHUD();upd()},
- buy(f){const a=A();if(!a)return;const amt=Math.floor(state.money*f),imp=Math.min(.25,amt/150000),unit=a.price*(1+imp/2),q=Math.floor(amt/unit);if(q<1)return;
-  const cost=q*unit;state.money-=cost;a.avgPrice=(a.owned*a.avgPrice+cost)/(a.owned+q);a.owned+=q;a.price*=1+imp;SoundFX.buy();updateHUD();upd()},
- sell(f){const a=A();if(!a)return;const q=Math.floor(a.owned*f);if(q<1)return;
-  const imp=Math.min(.25,q*a.price/150000),rev=q*a.price*(1-imp/2);a.owned-=q;if(a.owned<=0)a.avgPrice=0;a.price=Math.max(1,a.price*(1-imp));
-  addMoney(rev,cx(),300,true);SoundFX.coin();spawnParticles(cx(),300,12,['🪙','💵']);updateHUD();upd()},
+ buy(f){const a=A();if(!a)return;const amt=Math.floor(state.money*f),imp=Math.min(1.5,amt/depth()),q=Math.floor(amt/(a.price*(1+imp/2)));coinBuyQty(q)},
+ sell(f){const a=A();if(!a)return;coinSellQty(Math.floor(a.owned*f))},
+ mint(f){const c=X.coin,a=A();if(!c||!a||Date.now()<X.mintReady)return;const n=Math.floor(c.supply*f);if(n<1)return;
+  a.price=Math.max(1,a.price*c.supply/(c.supply+n));c.supply+=n;a.owned+=n;X.mintReady=Date.now()+60000;c.hype=Math.max(0,c.hype-15);
+  if(f>=.5&&Math.random()<.35){a.price=Math.max(1,a.price*.5);c.hype=Math.max(0,c.hype-20);showToast('🚨 Accusé de rug pull ! Le prix s’effondre')}else showToast('🏭 '+n.toLocaleString('fr-FR')+' tokens créés : le prix baisse (dilution)');
+  SoundFX.buy();if(typeof updateMarketHUD==='function')updateMarketHUD();updateHUD();save();upd()},
+ burn(f){const c=X.coin,a=A();if(!c||!a)return;const n=Math.floor(a.owned*f);if(n<1||n>=c.supply)return;
+  a.price*=Math.pow(c.supply/(c.supply-n),1.2);c.supply-=n;a.owned-=n;c.hype=Math.min(100,c.hype+6);showToast('🔥 '+n.toLocaleString('fr-FR')+' tokens brûlés : plus rare, prix en hausse');SoundFX.coin();
+  if(typeof updateMarketHUD==='function')updateMarketHUD();updateHUD();save();upd()},
+ hack(id){hackStart(id)},
+ _pad(k){hackPad(k)},
+ _dbg(){return hk},
  pub(){const c=Math.floor(500+_g()*45);if(Date.now()<X.pubReady||!spend(c))return;X.rep=Math.min(100,X.rep+15);X.pubReady=Date.now()+20000;SoundFX.coin();showToast('📢 Ta pub fait venir de nouveaux clients !');updateHUD();save();upd()},
  prime(){const c=Math.floor(econ().sal*40+200);if(!spend(c))return;X.morale=Math.min(100,X.morale+25);SoundFX.coin();showToast('🎁 Ton équipe est ravie de sa prime !');updateHUD();save();upd()},
  raise(){const c=Math.floor(3000*Math.pow(2.5,X.raise));if(X.raise>=5||!spend(c))return;X.raise++;X.morale=Math.min(100,X.morale+10);SoundFX.buy();showToast('💶 Salaires augmentés (niveau '+X.raise+')');updateHUD();save();upd()},
